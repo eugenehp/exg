@@ -10,6 +10,13 @@ homepage      = "https://github.com/eugenehp/exg"
 repository    = "https://github.com/eugenehp/exg"
 documentation = "https://docs.rs/exg"
 
+exclude = [
+    "data/*",
+    "scripts/",
+    "tests/vectors/",
+    "comparison"
+]
+
 [lib]
 name = "exg"
 path = "src/lib.rs"
@@ -44,9 +51,3 @@ harness = false
 [profile.release]
 opt-level = 3
 lto       = "thin"
-
-exclude = [
-    "data/*",
-    "scripts/",
-    "tests/vectors/"
-]
