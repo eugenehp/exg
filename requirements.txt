@@ -1,0 +1,8 @@
+# exg Python scripts (test-vector generation, benchmarks, comparison figures)
+# Install with:  pip install -r requirements.txt
+
+mne>=1.6.0
+numpy>=1.24
+scipy>=1.11
+matplotlib>=3.7
+safetensors>=0.4
