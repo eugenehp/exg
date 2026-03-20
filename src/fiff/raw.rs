@@ -29,6 +29,7 @@ use super::tree::{read_tree, scan_directory, try_load_directory};
 
 /// Metadata for one raw-data buffer block in the file.
 #[derive(Debug, Clone)]
+/// A single data buffer from a FIFF file, with its byte offset and sample range.
 pub struct BufferRecord {
     /// Tag header for this buffer (use `.pos + 16` to seek to data).
     pub tag:        TagHeader,

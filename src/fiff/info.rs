@@ -29,6 +29,7 @@ use super::tree::Node;
 /// 100 bytes
 /// ```
 #[derive(Debug, Clone)]
+/// Per-channel information parsed from the FIFF 96-byte channel info struct.
 pub struct ChannelInfo {
     pub scan_no:   i32,
     pub log_no:    i32,

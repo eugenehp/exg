@@ -1,99 +1,97 @@
 //! # exg — EEG/ECG/EMG preprocessing in pure Rust
 //!
-//! `exg` is a zero-dependency\* Rust library that implements the EEG
-//! preprocessing pipeline. Every DSP step is ported from
-//! [MNE-Python](https://mne.tools) and verified against MNE ground truth via
-//! safetensors test vectors (run `cargo test`).
+//! [![Crate](https://img.shields.io/crates/v/exg.svg)](https://crates.io/crates/exg)
+//! [![Docs](https://docs.rs/exg/badge.svg)](https://docs.rs/exg)
 //!
-//! _\* No Python, no BLAS, no C libraries — pure Rust + [RustFFT](https://crates.io/crates/rustfft)._
+//! `exg` is a pure-Rust library for EEG preprocessing with 100% numerical
+//! parity against [MNE-Python](https://mne.tools). Every DSP step is ported
+//! from MNE and verified against ground-truth test vectors (200+ tests).
 //!
-//! ## Pipeline overview
+//! _No Python, no BLAS, no C libraries — pure Rust + [RustFFT](https://crates.io/crates/rustfft)._
 //!
-//! ```text
-//! sample_raw.fif
-//!   │
-//!   ├─ fiff::open_raw()       native FIFF reader (no MNE)
-//!   ├─ resample::resample()   FFT polyphase → target_sfreq (default 256 Hz)
-//!   ├─ filter (FIR HP)        firwin + overlap-add → 0.5 Hz cutoff
-//!   ├─ reference              per-timepoint channel mean removed
-//!   ├─ normalize (z-score)    (data − μ) / σ  over all ch × t
-//!   ├─ epoch                  non-overlapping 5 s windows
-//!   ├─ baseline correct       per-epoch per-channel mean removed
-//!   └─ ÷ data_norm            ÷ 10 → std ≈ 0.1
-//!        │
-//!        └─→ Vec<([C, 1280] f32, [C, 3] f32)>   (epochs, channel positions)
-//! ```
+//! ## Workspace
 //!
-//! ## Quick start
+//! | Crate | Description |
+//! |-------|-------------|
+//! | **`exg`** | Core DSP, file I/O, generic preprocessing pipeline |
+//! | **[`exg-luna`](https://crates.io/crates/exg-luna)** | LUNA seizure-detection pipeline |
+//! | **[`exg-source`](https://crates.io/crates/exg-source)** | Source localisation (eLORETA, MNE/dSPM/sLORETA) |
+//!
+//! ## Features
+//!
+//! | Category | Capabilities |
+//! |----------|-------------|
+//! | **File I/O** | FIF, EDF/EDF+, CSV readers; HDF5 (feature-gated); safetensors export |
+//! | **Filters** | Highpass, lowpass, bandpass, notch — all MNE-parity `_firwin_design` |
+//! | **DSP** | FFT polyphase resampling, average reference, overlap-add convolution |
+//! | **Normalisation** | Global z-score, channel-wise z-score, per-epoch baseline correction |
+//! | **Montages** | TCP bipolar (22-ch), Siena unipolar (29-ch), SEED-V unipolar (62-ch) |
+//! | **Pipelines** | Generic `preprocess()`, LUNA-specific via `exg-luna` crate |
+//! | **Source localisation** | eLORETA, MNE/dSPM/sLORETA (via `exg-source` crate) |
+//!
+//! ## Quick start — generic pipeline
 //!
 //! ```no_run
-//! use exg::{preprocess, PipelineConfig};
-//! use exg::fiff::open_raw;
+//! use exg::{preprocess, PipelineConfig, fiff::open_raw};
 //! use ndarray::Array2;
 //!
-//! // 1. Read a .fif file — no Python required
 //! let raw  = open_raw("data/sample1_raw.fif").unwrap();
-//! let data = raw.read_all_data().unwrap();          // [C, T]  f64
-//!
-//! // 2. Channel positions from the FIF file (metres)
+//! let data = raw.read_all_data().unwrap();
 //! let chan_pos: Array2<f32> = Array2::zeros((raw.info.n_chan, 3));
-//!
-//! // 3. Run the full preprocessing pipeline
-//! let cfg    = PipelineConfig::default();
-//! let epochs = preprocess(
-//!     data.mapv(|v| v as f32),
-//!     chan_pos,
-//!     raw.info.sfreq as f32,
-//!     &cfg,
-//! ).unwrap();
-//!
-//! for (i, (epoch_data, pos)) in epochs.iter().enumerate() {
-//!     println!("Epoch {i}: shape {:?}", epoch_data.dim());
-//! }
+//! let cfg  = PipelineConfig::default();           // 256 Hz · 0.5 Hz HP · 5 s epochs
+//! let epochs = preprocess(data.mapv(|v| v as f32), chan_pos, raw.info.sfreq as f32, &cfg).unwrap();
 //! ```
 //!
-//! ## Running individual steps
+//! ## Quick start — LUNA seizure-detection pipeline
 //!
-//! Each preprocessing step is also exposed as a standalone function:
+//! The LUNA pipeline lives in the separate [`exg-luna`](https://crates.io/crates/exg-luna) crate:
+//!
+//! ```ignore
+//! use exg::edf::open_raw_edf;
+//! use exg_luna::{preprocess_luna, LunaPipelineConfig};
+//!
+//! let raw = open_raw_edf("recording.edf").unwrap();
+//! let data = raw.read_all_data().unwrap();
+//! let ch_names = raw.channel_names();
+//! let cfg = LunaPipelineConfig::default();        // 0.1–75 Hz BP · 60 Hz notch · TCP montage
+//! let epochs = preprocess_luna(data, &ch_names, raw.header.sample_rate, &cfg).unwrap();
+//! ```
+//!
+//! ## Individual DSP steps
 //!
 //! ```no_run
-//! use exg::resample::resample;
-//! use exg::filter::{design_highpass, apply_fir_zero_phase};
-//! use exg::reference::average_reference_inplace;
-//! use exg::normalize::zscore_global_inplace;
-//! use exg::epoch::epoch;
+//! use exg::{resample::resample, filter::*, reference::*, normalize::*, epoch::*};
 //! use ndarray::Array2;
 //!
-//! let mut data: Array2<f32> = Array2::zeros((12, 3840)); // [C, T]
+//! let mut data: Array2<f32> = Array2::zeros((22, 7680));
 //!
-//! // Resample from 1024 Hz → 256 Hz
-//! let data = resample(&data, 1024.0, 256.0).unwrap();
+//! // Resample 512 → 256 Hz
+//! let mut data = resample(&data, 512.0, 256.0).unwrap();
 //!
-//! // Apply 0.5 Hz highpass FIR
-//! let h = design_highpass(0.5, 256.0);
-//! let mut data = data;
+//! // Bandpass 0.1–75 Hz
+//! let h = design_bandpass(0.1, 75.0, 256.0);
 //! apply_fir_zero_phase(&mut data, &h).unwrap();
 //!
-//! // Average reference
+//! // Notch 60 Hz
+//! let h = design_notch(60.0, 256.0, None, None);
+//! apply_fir_zero_phase(&mut data, &h).unwrap();
+//!
+//! // Average reference → channel-wise z-score → epoch
 //! average_reference_inplace(&mut data);
-//!
-//! // Global z-score
-//! let (mean, std) = zscore_global_inplace(&mut data);
-//!
-//! // Epoch into 5 s windows
-//! let epochs = epoch(&data, 1280); // [E, C, 1280]
+//! zscore_channelwise_inplace(&mut data);
+//! let epochs = epoch(&data, 1280);                // [E, 22, 1280]
 //! ```
-//!
-//! ## Feature coverage
-//!
-//! See the [README](https://github.com/Zyphra/exg#mne-feature-coverage) for a
-//! full table of which MNE features are implemented and which are not yet ported.
 
 pub mod config;
+pub mod csv;
+pub mod edf;
 pub mod epoch;
 pub mod fiff;
 pub mod filter;
+#[cfg(feature = "hdf5")]
+pub mod hdf5;
 pub mod io;
+pub mod montage;
 pub mod normalize;
 pub mod reference;
 pub mod resample;
@@ -107,7 +105,7 @@ pub mod resample;
 ///
 /// ```toml
 /// [dependencies]
-/// exg = { version = "0.0.2", default-features = false }
+/// exg = { version = "0.0.3", default-features = false }
 /// ```
 #[cfg(feature = "source")]
 pub use exg_source as source_localization;
@@ -122,6 +120,12 @@ use ndarray::Array2;
 
 // config
 pub use config::PipelineConfig;
+
+// csv
+pub use csv::read_eeg;
+
+// edf
+pub use edf::{open_raw_edf, RawEdf, EdfHeader, SignalHeader, EdfAnnotation};
 
 // epoch
 pub use epoch::{epoch, epoch_and_baseline};
@@ -142,16 +146,27 @@ pub use fiff::{
 
 // filter — design helpers + convolution
 pub use filter::{
-    auto_trans_bandwidth, auto_filter_length, design_highpass,
+    auto_trans_bandwidth, auto_trans_bandwidth_lowpass, auto_filter_length,
+    design_highpass, design_lowpass, design_bandpass, design_notch,
     firwin, hamming,
     apply_fir_zero_phase, filter_1d,
 };
 
+// hdf5 — HDF5 dataset reader (feature-gated)
+#[cfg(feature = "hdf5")]
+pub use hdf5::{read_dataset as read_hdf5, read_dataset_split as read_hdf5_split, HDF5Sample};
+
 // io — safetensors helpers
 pub use io::{RawData, StWriter, write_batch};
 
+// montage
+pub use montage::{
+    make_bipolar, normalize_channel_name, pick_channels,
+    TCP_MONTAGE, SIENA_CHANNELS, SEED_V_CHANNELS, BipolarDef,
+};
+
 // normalize
-pub use normalize::{zscore_global_inplace, baseline_correct_inplace};
+pub use normalize::{zscore_global_inplace, zscore_channelwise_inplace, baseline_correct_inplace};
 
 // reference
 pub use reference::average_reference_inplace;

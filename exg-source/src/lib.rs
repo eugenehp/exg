@@ -8,9 +8,10 @@
 //! dependencies. Uses [`faer`](https://crates.io/crates/faer) for SVD and
 //! eigendecomposition.
 //!
-//! This crate can be used **standalone** or as an optional dependency of
-//! [`exg`](https://crates.io/crates/exg) (enabled by the default `source`
-//! feature).
+//! Part of the [`exg`](https://crates.io/crates/exg) workspace.
+//! Can be used **standalone** or via `exg`'s default `source` feature.
+//! See also [`exg-luna`](https://crates.io/crates/exg-luna) for the LUNA
+//! seizure-detection preprocessing pipeline.
 //!
 //! ## End-to-end example
 //!

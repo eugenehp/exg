@@ -7,8 +7,10 @@ ported from [MNE-Python](https://mne.tools), with no C, BLAS, or Python
 dependencies. Linear algebra is handled by
 [faer](https://crates.io/crates/faer) (pure Rust).
 
-This crate can be used **standalone** or as part of
-[exg](https://crates.io/crates/exg) via the default `source` feature.
+Part of the [`exg`](https://crates.io/crates/exg) workspace.
+Can be used **standalone** or via `exg`'s default `source` feature.
+See also [`exg-luna`](https://crates.io/crates/exg-luna) for the LUNA
+seizure-detection preprocessing pipeline.
 
 ---
 
@@ -16,7 +18,7 @@ This crate can be used **standalone** or as part of
 
 ```toml
 [dependencies]
-exg-source = "0.0.2"
+exg-source = "0.0.3"
 ```
 
 ```rust

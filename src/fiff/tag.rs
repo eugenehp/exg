@@ -23,6 +23,7 @@ use super::constants::*;
 
 /// Lightweight tag header — no payload loaded yet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Header of a single FIFF tag (kind, type, size, position).
 pub struct TagHeader {
     pub kind: i32,
     pub ftype: u32,   // "type" is a Rust keyword

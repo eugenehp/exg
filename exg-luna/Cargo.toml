@@ -1,0 +1,22 @@
+[package]
+name          = "exg-luna"
+version       = "0.0.3"
+edition       = "2021"
+description   = "LUNA seizure-detection preprocessing pipeline for EEG — built on exg"
+keywords      = ["eeg", "luna", "seizure", "preprocessing", "tcp"]
+categories    = ["science", "mathematics"]
+authors       = ["Eugene Hauptmann"]
+license-file  = "../LICENSE"
+homepage      = "https://github.com/eugenehp/exg"
+repository    = "https://github.com/eugenehp/exg"
+documentation = "https://docs.rs/exg-luna"
+readme        = "README.md"
+
+[dependencies]
+exg         = { version = "0.0.3", path = "..", default-features = false }
+ndarray     = "0.17.2"
+anyhow      = "1"
+serde_json  = "1"
+
+[dev-dependencies]
+approx = "0.5"

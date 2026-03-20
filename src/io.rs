@@ -1,6 +1,11 @@
 //! Safetensors I/O for the preprocessing pipeline.
 //!
-//! Reader: parses `raw.safetensors` written by `scripts/read_raw.py`.
+//! - [`RawData`]: parses `raw.safetensors` written by `scripts/read_raw.py`.
+//! - [`StWriter`]: generic safetensors file builder (F32, F64, I32 tensors).
+//! - [`write_batch`]: writes preprocessed epochs to `batch.safetensors`.
+//!
+//! For LUNA-specific epoch export/import, see the
+//! [`exg-luna`](https://crates.io/crates/exg-luna) crate.
 use anyhow::{bail, Context, Result};
 use ndarray::Array2;
 use std::collections::HashMap;
@@ -59,6 +64,7 @@ pub struct RawData {
 }
 
 impl RawData {
+    /// Load raw EEG data from a safetensors file produced by `scripts/read_raw.py`.
     pub fn load(path: &Path) -> Result<Self> {
         let bytes = std::fs::read(path).context("reading raw.safetensors")?;
         let (header, data_start) = parse_header(&bytes)?;
@@ -108,40 +114,49 @@ impl RawData {
 /// w.add_f64("signal_d", &[1.0f64, 2.0, 3.0], &[1, 3]);
 /// w.write(Path::new("/tmp/out.safetensors")).unwrap();
 /// ```
+#[derive(Default)]
 pub struct StWriter {
-    entries: Vec<(String, Vec<u8>, &'static str, Vec<usize>)>,
+    /// Internal entries: (name, bytes, dtype_str, shape).
+    pub entries: Vec<(String, Vec<u8>, &'static str, Vec<usize>)>,
 }
 
 impl StWriter {
+    /// Create an empty writer.
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        Self::default()
     }
 
+    /// Add a named F32 tensor.
     pub fn add_f32(&mut self, name: &str, data: &[f32], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         self.entries.push((name.to_string(), bytes, "F32", shape.to_vec()));
     }
 
+    /// Add a named F32 tensor from an `Array2`.
     pub fn add_f32_arr2(&mut self, name: &str, arr: &ndarray::Array2<f32>) {
         let data: Vec<f32> = arr.iter().copied().collect();
         self.add_f32(name, &data, &[arr.nrows(), arr.ncols()]);
     }
 
+    /// Add a named F64 tensor.
     pub fn add_f64(&mut self, name: &str, data: &[f64], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         self.entries.push((name.to_string(), bytes, "F64", shape.to_vec()));
     }
 
+    /// Add a named F64 tensor from an `Array2`.
     pub fn add_f64_arr2(&mut self, name: &str, arr: &ndarray::Array2<f64>) {
         let data: Vec<f64> = arr.iter().copied().collect();
         self.add_f64(name, &data, &[arr.nrows(), arr.ncols()]);
     }
 
+    /// Add a named I32 tensor.
     pub fn add_i32(&mut self, name: &str, data: &[i32], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         self.entries.push((name.to_string(), bytes, "I32", shape.to_vec()));
     }
 
+    /// Write all tensors to a safetensors file.
     pub fn write(&self, path: &Path) -> Result<()> {
         use std::io::Write;
         let mut header_map = serde_json::Map::new();
@@ -157,7 +172,7 @@ impl StWriter {
         let hdr_bytes = serde_json::to_vec(&header_map)?;
         let pad = (8 - hdr_bytes.len() % 8) % 8;
         let padded: Vec<u8> = hdr_bytes.into_iter()
-            .chain(std::iter::repeat(b' ').take(pad))
+            .chain(std::iter::repeat_n(b' ', pad))
             .collect();
         let mut f = std::fs::File::create(path)?;
         f.write_all(&(padded.len() as u64).to_le_bytes())?;
@@ -237,7 +252,7 @@ pub fn write_batch(
     let pad = (8 - header_bytes.len() % 8) % 8;
     let header_padded: Vec<u8> = header_bytes
         .into_iter()
-        .chain(std::iter::repeat(b' ').take(pad))
+        .chain(std::iter::repeat_n(b' ', pad))
         .collect();
 
     let mut f = std::fs::File::create(path)?;

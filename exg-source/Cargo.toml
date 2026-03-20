@@ -1,12 +1,12 @@
 [package]
 name          = "exg-source"
-version       = "0.0.2"
+version       = "0.0.3"
 edition       = "2021"
 description   = "EEG source localization (MNE / dSPM / sLORETA / eLORETA) — pure Rust"
 keywords      = ["eeg", "source-localization", "loreta", "mne", "inverse"]
 categories    = ["science", "mathematics"]
 authors       = ["Eugene Hauptmann"]
-license       = "LicenseRef-AI100"
+license-file  = "../LICENSE"
 homepage      = "https://github.com/eugenehp/exg"
 repository    = "https://github.com/eugenehp/exg"
 documentation = "https://docs.rs/exg-source"

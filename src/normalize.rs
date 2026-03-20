@@ -25,6 +25,35 @@ pub fn zscore_global_inplace(data: &mut Array2<f32>) -> (f32, f32) {
     (mean, std)
 }
 
+/// Channel-wise z-score normalisation.
+///
+/// For each channel (row), subtracts the channel mean and divides by channel std.
+/// Uses `ddof = 0` and adds `eps = 1e-8` to std to avoid division by zero.
+///
+/// Matches the LUNA inference normalisation:
+/// ```python
+/// mean = data.mean(dim=2, keepdim=True)
+/// std = data.std(dim=2, keepdim=True)
+/// data = (data - mean) / (std + eps)
+/// ```
+pub fn zscore_channelwise_inplace(data: &mut Array2<f32>) {
+    let eps = 1e-8_f32;
+    let n_ch = data.nrows();
+    let n_t = data.ncols();
+    let n = n_t as f64;
+    for ch in 0..n_ch {
+        let row = data.row(ch);
+        let mean = row.iter().map(|&v| v as f64).sum::<f64>() / n;
+        let var = row.iter().map(|&v| {
+            let d = v as f64 - mean;
+            d * d
+        }).sum::<f64>() / n;
+        let std = var.sqrt() as f32;
+        let mean = mean as f32;
+        data.row_mut(ch).mapv_inplace(|v| (v - mean) / (std + eps));
+    }
+}
+
 /// Per-channel, per-epoch baseline correction.
 /// `epochs`: [E, C, T]  →  epoch[e, c, :] -= mean(epoch[e, c, :])
 pub fn baseline_correct_inplace(epochs: &mut Array3<f32>) {
@@ -75,6 +104,22 @@ mod tests {
         assert_eq!(s, 0.0);
         for &v in data.iter() {
             approx::assert_abs_diff_eq!(v, 7.0, epsilon = 1e-6_f32);
+        }
+    }
+
+    #[test]
+    fn zscore_channelwise_mean_zero_std_one() {
+        let mut data = Array2::from_shape_fn((8, 512), |(c, t)| {
+            (c as f32 * 3.7 + t as f32 * 0.1).sin() * 50.0 + c as f32 * 10.0
+        });
+        zscore_channelwise_inplace(&mut data);
+        for ch in 0..8usize {
+            let row = data.row(ch);
+            let n = row.len() as f64;
+            let mean = row.iter().map(|&v| v as f64).sum::<f64>() / n;
+            let std = (row.iter().map(|&v| { let d = v as f64 - mean; d * d }).sum::<f64>() / n).sqrt();
+            approx::assert_abs_diff_eq!(mean as f32, 0.0, epsilon = 1e-4_f32);
+            approx::assert_abs_diff_eq!(std as f32, 1.0, epsilon = 1e-3_f32);
         }
     }
 

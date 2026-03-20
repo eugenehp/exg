@@ -5,6 +5,11 @@
 //! `data`: [C, T]  →  `data[c, t] -= mean(data[:, t])`
 use ndarray::{Array2, Axis};
 
+/// Subtract the per-timepoint channel mean from each channel.
+///
+/// Matches `raw.set_eeg_reference('average', projection=False)`.
+///
+/// `data`: `[C, T]` → `data[c, t] -= mean(data[:, t])`
 pub fn average_reference_inplace(data: &mut Array2<f32>) {
     let means = data.mean_axis(Axis(0)).unwrap(); // shape [T]
     for mut row in data.rows_mut() {

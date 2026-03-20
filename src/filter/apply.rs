@@ -82,7 +82,7 @@ pub fn filter_1d(x: &[f32], h: &[f32]) -> Result<Vec<f32>> {
         // Accumulate with overlap-add (accounting for zero-phase shift).
         let out_start = start.saturating_sub(shift);
         let out_end   = (out_start + n_fft).min(n_ext);
-        let prod_start = if start < shift { shift - start } else { 0 };
+        let prod_start = shift.saturating_sub(start);
 
         for (o, p) in (out_start..out_end).zip(prod_start..) {
             if p < buf.len() {
@@ -114,8 +114,10 @@ fn reflect_limited_pad(x: &[f32], n_l: usize, n_r: usize) -> Vec<f32> {
         out.push(2.0 * x[0] - x[i]);
     }
     // If requested padding exceeds signal, prepend zeros.
-    for _ in actual_l..n_l {
-        out.insert(0, 0.0);
+    if actual_l < n_l {
+        let mut prefix = vec![0.0_f32; n_l - actual_l];
+        prefix.append(&mut out);
+        out = prefix;
     }
 
     out.extend_from_slice(x);
@@ -127,8 +129,8 @@ fn reflect_limited_pad(x: &[f32], n_l: usize, n_r: usize) -> Vec<f32> {
         out.push(2.0 * last - x[idx]);
     }
     // If requested padding exceeds signal, append zeros.
-    for _ in actual_r..n_r {
-        out.push(0.0);
+    if actual_r < n_r {
+        out.extend(std::iter::repeat_n(0.0_f32, n_r - actual_r));
     }
 
     out
