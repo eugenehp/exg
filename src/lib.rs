@@ -95,6 +95,7 @@ pub mod montage;
 pub mod normalize;
 pub mod reference;
 pub mod resample;
+pub mod xdf;
 
 /// EEG source localization (MNE / dSPM / sLORETA / eLORETA).
 ///

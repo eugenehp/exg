@@ -1,6 +1,6 @@
 [package]
 name          = "exg-source"
-version       = "0.0.3"
+version       = "0.0.4"
 edition       = "2021"
 description   = "EEG source localization (MNE / dSPM / sLORETA / eLORETA) — pure Rust"
 keywords      = ["eeg", "source-localization", "loreta", "mne", "inverse"]
