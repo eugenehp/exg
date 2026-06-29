@@ -10,13 +10,15 @@ use std::fs;
 
 fn load_json(name: &str) -> serde_json::Value {
     let path = format!("scripts/parity_vectors/{name}");
-    let data = fs::read_to_string(&path)
-        .unwrap_or_else(|_| panic!("Missing vector file: {path}"));
+    let data = fs::read_to_string(&path).unwrap_or_else(|_| panic!("Missing vector file: {path}"));
     serde_json::from_str(&data).unwrap()
 }
 
 fn get_f64_vec(val: &serde_json::Value, key: &str) -> Vec<f64> {
-    val[key].as_array().unwrap().iter()
+    val[key]
+        .as_array()
+        .unwrap()
+        .iter()
         .map(|v| v.as_f64().unwrap())
         .collect()
 }
@@ -32,7 +34,9 @@ fn parity_highpass_coefficients() {
     let rust_h = exg::design_highpass(0.5, 256.0);
 
     assert_eq!(rust_h.len(), mne_h.len(), "length mismatch");
-    let max_diff: f64 = rust_h.iter().zip(mne_h.iter())
+    let max_diff: f64 = rust_h
+        .iter()
+        .zip(mne_h.iter())
         .map(|(&r, &m)| (r as f64 - m).abs())
         .fold(0.0_f64, f64::max);
     // f32 output precision: ~1e-7 relative, ~3e-8 absolute for small values
@@ -46,7 +50,9 @@ fn parity_lowpass_coefficients() {
     let rust_h = exg::design_lowpass(75.0, 256.0);
 
     assert_eq!(rust_h.len(), mne_h.len());
-    let max_diff: f64 = rust_h.iter().zip(mne_h.iter())
+    let max_diff: f64 = rust_h
+        .iter()
+        .zip(mne_h.iter())
         .map(|(&r, &m)| (r as f64 - m).abs())
         .fold(0.0_f64, f64::max);
     assert!(max_diff < 5e-8, "LP max coeff diff = {max_diff:.2e}");
@@ -59,7 +65,9 @@ fn parity_bandpass_01_75_coefficients() {
     let rust_h = exg::design_bandpass(0.1, 75.0, 256.0);
 
     assert_eq!(rust_h.len(), mne_h.len());
-    let max_diff: f64 = rust_h.iter().zip(mne_h.iter())
+    let max_diff: f64 = rust_h
+        .iter()
+        .zip(mne_h.iter())
         .map(|(&r, &m)| (r as f64 - m).abs())
         .fold(0.0_f64, f64::max);
     assert!(max_diff < 5e-8, "BP 0.1-75 max coeff diff = {max_diff:.2e}");
@@ -72,7 +80,9 @@ fn parity_bandpass_1_40_coefficients() {
     let rust_h = exg::design_bandpass(1.0, 40.0, 256.0);
 
     assert_eq!(rust_h.len(), mne_h.len());
-    let max_diff: f64 = rust_h.iter().zip(mne_h.iter())
+    let max_diff: f64 = rust_h
+        .iter()
+        .zip(mne_h.iter())
         .map(|(&r, &m)| (r as f64 - m).abs())
         .fold(0.0_f64, f64::max);
     assert!(max_diff < 5e-8, "BP 1-40 max coeff diff = {max_diff:.2e}");
@@ -85,7 +95,9 @@ fn parity_notch_60_coefficients() {
     let rust_h = exg::design_notch(60.0, 256.0, None, None);
 
     assert_eq!(rust_h.len(), mne_h.len());
-    let max_diff: f64 = rust_h.iter().zip(mne_h.iter())
+    let max_diff: f64 = rust_h
+        .iter()
+        .zip(mne_h.iter())
         .map(|(&r, &m)| (r as f64 - m).abs())
         .fold(0.0_f64, f64::max);
     assert!(max_diff < 5e-8, "Notch max coeff diff = {max_diff:.2e}");
@@ -125,7 +137,7 @@ fn parity_bandpass_application_removes_dc() {
     // DC should be removed by bandpass
     let n_h = h.len();
     let row0 = data.row(0);
-    let interior = &row0.as_slice().unwrap()[n_h..n-n_h];
+    let interior = &row0.as_slice().unwrap()[n_h..n - n_h];
     let max_val: f32 = interior.iter().map(|v| v.abs()).fold(0.0_f32, f32::max);
     assert!(max_val < 0.01, "DC not removed: max={max_val}");
 }
@@ -138,7 +150,7 @@ fn parity_lowpass_passes_dc() {
     // DC should pass through lowpass
     let n_h = h.len();
     let row0 = data.row(0);
-    let interior = &row0.as_slice().unwrap()[n_h..4096-n_h];
+    let interior = &row0.as_slice().unwrap()[n_h..4096 - n_h];
     let mean: f32 = interior.iter().sum::<f32>() / interior.len() as f32;
     approx::assert_abs_diff_eq!(mean, 3.0, epsilon = 0.01);
 }
@@ -150,7 +162,7 @@ fn parity_notch_passes_dc() {
     exg::apply_fir_zero_phase(&mut data, &h).unwrap();
     let n_h = h.len();
     let row0 = data.row(0);
-    let interior = &row0.as_slice().unwrap()[n_h..4096-n_h];
+    let interior = &row0.as_slice().unwrap()[n_h..4096 - n_h];
     let mean: f32 = interior.iter().sum::<f32>() / interior.len() as f32;
     approx::assert_abs_diff_eq!(mean, 7.0, epsilon = 0.01);
 }
@@ -178,9 +190,15 @@ fn parity_zscore_channelwise() {
         let row = data.row(ch);
         let n = row.len() as f64;
         let mean = row.iter().map(|&v| v as f64).sum::<f64>() / n;
-        let std = (row.iter().map(|&v| {
-            let d = v as f64 - mean; d * d
-        }).sum::<f64>() / n).sqrt();
+        let std = (row
+            .iter()
+            .map(|&v| {
+                let d = v as f64 - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / n)
+            .sqrt();
 
         assert!(mean.abs() < 1e-4, "ch{ch} mean={mean:.2e}");
         approx::assert_abs_diff_eq!(std as f32, 1.0, epsilon = 1e-3);
@@ -206,9 +224,15 @@ fn parity_zscore_global() {
     // Post-normalization: mean≈0, std≈1
     let n = data.len() as f64;
     let post_mean = data.iter().map(|&v| v as f64).sum::<f64>() / n;
-    let post_std = (data.iter().map(|&v| {
-        let d = v as f64 - post_mean; d * d
-    }).sum::<f64>() / n).sqrt();
+    let post_std = (data
+        .iter()
+        .map(|&v| {
+            let d = v as f64 - post_mean;
+            d * d
+        })
+        .sum::<f64>()
+        / n)
+        .sqrt();
 
     assert!(post_mean.abs() < 1e-5, "mean={post_mean}");
     approx::assert_abs_diff_eq!(post_std as f32, 1.0, epsilon = 1e-4);
@@ -222,9 +246,7 @@ fn parity_zscore_global() {
 
 #[test]
 fn parity_average_reference() {
-    let mut data = Array2::from_shape_fn((8, 512), |(c, t)| {
-        ((c * 7 + t * 3) as f32).sin() * 50.0
-    });
+    let mut data = Array2::from_shape_fn((8, 512), |(c, t)| ((c * 7 + t * 3) as f32).sin() * 50.0);
 
     exg::average_reference_inplace(&mut data);
 
@@ -303,18 +325,28 @@ fn parity_edf_reader() {
     }
 
     // Check statistics
-    let ch0_mean: f64 = data.row(0).iter().map(|&v| v as f64).sum::<f64>()
-        / data.ncols() as f64;
-    let ch0_std: f64 = (data.row(0).iter().map(|&v| {
-        let d = v as f64 - ch0_mean; d * d
-    }).sum::<f64>() / data.ncols() as f64).sqrt();
+    let ch0_mean: f64 = data.row(0).iter().map(|&v| v as f64).sum::<f64>() / data.ncols() as f64;
+    let ch0_std: f64 = (data
+        .row(0)
+        .iter()
+        .map(|&v| {
+            let d = v as f64 - ch0_mean;
+            d * d
+        })
+        .sum::<f64>()
+        / data.ncols() as f64)
+        .sqrt();
 
     let mean_err = (ch0_mean - gt_ch0_mean).abs();
     let std_err = (ch0_std - gt_ch0_std).abs();
-    assert!(mean_err < gt_ch0_std * 0.01,
-            "ch0 mean: rust={ch0_mean:.6e} mne={gt_ch0_mean:.6e} diff={mean_err:.2e}");
-    assert!(std_err < gt_ch0_std * 0.01,
-            "ch0 std: rust={ch0_std:.6e} mne={gt_ch0_std:.6e} diff={std_err:.2e}");
+    assert!(
+        mean_err < gt_ch0_std * 0.01,
+        "ch0 mean: rust={ch0_mean:.6e} mne={gt_ch0_mean:.6e} diff={mean_err:.2e}"
+    );
+    assert!(
+        std_err < gt_ch0_std * 0.01,
+        "ch0 std: rust={ch0_std:.6e} mne={gt_ch0_std:.6e} diff={std_err:.2e}"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -324,10 +356,10 @@ fn parity_edf_reader() {
 #[test]
 fn parity_bipolar_montage() {
     let names: Vec<String> = vec!["FP1", "F7", "T3", "F3"]
-        .into_iter().map(String::from).collect();
-    let data = Array2::from_shape_fn((4, 100), |(c, _)| {
-        [1.0_f32, 0.3, 0.7, 0.5][c]
-    });
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let data = Array2::from_shape_fn((4, 100), |(c, _)| [1.0_f32, 0.3, 0.7, 0.5][c]);
 
     let montage: &[exg::BipolarDef] = &[
         ("FP1-F7", "FP1", "F7"),
@@ -372,4 +404,3 @@ fn parity_full_pipeline_runs() {
         assert_eq!(pos.ncols(), 3);
     }
 }
-

@@ -78,7 +78,8 @@ pub fn compute_covariance(data: &Array2<f64>, reg: Regularization) -> NoiseCov {
             let alpha = alpha.clamp(0.0, 1.0);
             let trace = cov.diag().sum();
             let mu = trace / n_ch as f64;
-            let shrunk = cov.mapv(|v| v * (1.0 - alpha)) + Array2::<f64>::eye(n_ch).mapv(|v: f64| v * alpha * mu);
+            let shrunk = cov.mapv(|v| v * (1.0 - alpha))
+                + Array2::<f64>::eye(n_ch).mapv(|v: f64| v * alpha * mu);
             NoiseCov::full(shrunk)
         }
         Regularization::Diagonal => {
@@ -99,10 +100,7 @@ pub fn compute_covariance(data: &Array2<f64>, reg: Regularization) -> NoiseCov {
 ///
 /// Concatenates all epochs before computing covariance, subtracting the
 /// per-epoch, per-channel mean (i.e., each epoch is baseline-corrected).
-pub fn compute_covariance_epochs(
-    epochs: &ndarray::Array3<f64>,
-    reg: Regularization,
-) -> NoiseCov {
+pub fn compute_covariance_epochs(epochs: &ndarray::Array3<f64>, reg: Regularization) -> NoiseCov {
     let (n_epochs, n_ch, n_t) = epochs.dim();
     let total_t = n_epochs * n_t;
 
@@ -131,7 +129,8 @@ pub fn compute_covariance_epochs(
             let alpha = alpha.clamp(0.0, 1.0);
             let trace = cov.diag().sum();
             let mu = trace / n_ch as f64;
-            let shrunk = cov.mapv(|v| v * (1.0 - alpha)) + Array2::<f64>::eye(n_ch).mapv(|v: f64| v * alpha * mu);
+            let shrunk = cov.mapv(|v| v * (1.0 - alpha))
+                + Array2::<f64>::eye(n_ch).mapv(|v: f64| v * alpha * mu);
             NoiseCov::full(shrunk)
         }
         Regularization::Diagonal => {
@@ -202,9 +201,8 @@ mod tests {
 
     #[test]
     fn test_empirical_covariance_shape() {
-        let data = Array2::<f64>::from_shape_fn((4, 100), |(i, j)| {
-            ((i * 100 + j) as f64 * 0.1).sin()
-        });
+        let data =
+            Array2::<f64>::from_shape_fn((4, 100), |(i, j)| ((i * 100 + j) as f64 * 0.1).sin());
         let cov = compute_covariance(&data, Regularization::Empirical);
         assert_eq!(cov.n_channels(), 4);
         let full = cov.to_full();

@@ -308,7 +308,10 @@ mod tests {
                 min_dist = r;
             }
         }
-        assert!(min_dist < 0.015, "Closest point to center is {min_dist} m away");
+        assert!(
+            min_dist < 0.015,
+            "Closest point to center is {min_dist} m away"
+        );
     }
 
     #[test]

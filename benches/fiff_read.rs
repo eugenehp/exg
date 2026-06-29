@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 use exg::fiff::raw::open_raw;
+use std::hint::black_box;
 use std::path::Path;
 
 const FIF: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/sample1_raw.fif");
@@ -43,5 +43,10 @@ fn bench_read_slice_1s(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_open_raw, bench_read_all_data, bench_read_slice_1s);
+criterion_group!(
+    benches,
+    bench_open_raw,
+    bench_read_all_data,
+    bench_read_slice_1s
+);
 criterion_main!(benches);

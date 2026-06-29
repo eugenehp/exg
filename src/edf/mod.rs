@@ -90,7 +90,11 @@ impl SignalHeader {
     pub fn cal(&self) -> f64 {
         let phys_range = self.physical_max - self.physical_min;
         let dig_range = self.digital_max - self.digital_min;
-        if dig_range == 0.0 { 1.0 } else { phys_range / dig_range }
+        if dig_range == 0.0 {
+            1.0
+        } else {
+            phys_range / dig_range
+        }
     }
 
     /// Compute the offset for converting digital to physical values.
@@ -157,7 +161,11 @@ pub fn open_raw_edf<P: AsRef<Path>>(path: P) -> Result<RawEdf> {
         vec![]
     };
 
-    Ok(RawEdf { header, path, annotations })
+    Ok(RawEdf {
+        header,
+        path,
+        annotations,
+    })
 }
 
 impl RawEdf {
@@ -176,7 +184,9 @@ impl RawEdf {
 
     /// Channel names (excluding annotation channels).
     pub fn channel_names(&self) -> Vec<String> {
-        self.header.signals.iter()
+        self.header
+            .signals
+            .iter()
             .filter(|s| !is_annotation_channel(&s.label))
             .map(|s| s.label.clone())
             .collect()
@@ -184,14 +194,19 @@ impl RawEdf {
 
     /// Number of non-annotation channels.
     pub fn num_channels(&self) -> usize {
-        self.header.signals.iter()
+        self.header
+            .signals
+            .iter()
             .filter(|s| !is_annotation_channel(&s.label))
             .count()
     }
 
     /// Total number of samples per channel at the maximum sample rate.
     pub fn num_samples(&self) -> usize {
-        let max_spr = self.header.signals.iter()
+        let max_spr = self
+            .header
+            .signals
+            .iter()
             .filter(|s| !is_annotation_channel(&s.label))
             .map(|s| s.samples_per_record)
             .max()
@@ -202,8 +217,10 @@ impl RawEdf {
 
 fn is_annotation_channel(label: &str) -> bool {
     let l = label.trim().to_lowercase();
-    l.contains("edf annotation") || l.contains("edf+annotation")
-        || l == "edf annotations" || l == "bdf annotations"
+    l.contains("edf annotation")
+        || l.contains("edf+annotation")
+        || l == "edf annotations"
+        || l == "bdf annotations"
 }
 
 // ── Header parsing ────────────────────────────────────────────────────────────
@@ -218,13 +235,15 @@ fn read_fixed_str<R: Read>(reader: &mut R, n: usize) -> Result<String> {
 fn read_fixed_f64<R: Read>(reader: &mut R, n: usize) -> Result<f64> {
     let s = read_fixed_str(reader, n)?;
     let s = s.replace(',', ".");
-    s.trim().parse::<f64>()
+    s.trim()
+        .parse::<f64>()
         .with_context(|| format!("parsing float from EDF header: '{s}'"))
 }
 
 fn read_fixed_usize<R: Read>(reader: &mut R, n: usize) -> Result<usize> {
     let s = read_fixed_str(reader, n)?;
-    s.trim().parse::<usize>()
+    s.trim()
+        .parse::<usize>()
         .with_context(|| format!("parsing int from EDF header: '{s}'"))
 }
 
@@ -311,7 +330,8 @@ fn read_header<R: Read>(reader: &mut R) -> Result<EdfHeader> {
     }
 
     // Compute the maximum sample rate
-    let max_spr = signals.iter()
+    let max_spr = signals
+        .iter()
         .filter(|s| !is_annotation_channel(&s.label))
         .map(|s| s.samples_per_record)
         .max()
@@ -353,7 +373,8 @@ fn read_data<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Result<Array
         bail!("No non-annotation channels found in EDF file");
     }
 
-    let max_spr = sig_indices.iter()
+    let max_spr = sig_indices
+        .iter()
         .map(|&i| header.signals[i].samples_per_record)
         .max()
         .unwrap_or(1);
@@ -363,9 +384,7 @@ fn read_data<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Result<Array
     let mut data = Array2::<f32>::zeros((n_ch, n_total));
 
     // Total samples in one data record across all signals
-    let record_samples: usize = header.signals.iter()
-        .map(|s| s.samples_per_record)
-        .sum();
+    let record_samples: usize = header.signals.iter().map(|s| s.samples_per_record).sum();
 
     // Read record by record
     let mut record_buf = vec![0i16; record_samples];
@@ -422,7 +441,10 @@ fn read_data<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Result<Array
 
 // ── EDF+ Annotations parsing ─────────────────────────────────────────────────
 
-fn read_annotations<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Result<Vec<EdfAnnotation>> {
+fn read_annotations<R: Read + Seek>(
+    reader: &mut R,
+    header: &EdfHeader,
+) -> Result<Vec<EdfAnnotation>> {
     reader.seek(SeekFrom::Start(header.header_bytes as u64))?;
 
     let tal_indices: Vec<usize> = (0..header.num_signals)
@@ -433,9 +455,7 @@ fn read_annotations<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Resul
         return Ok(vec![]);
     }
 
-    let record_samples: usize = header.signals.iter()
-        .map(|s| s.samples_per_record)
-        .sum();
+    let record_samples: usize = header.signals.iter().map(|s| s.samples_per_record).sum();
     let record_bytes = record_samples * 2;
 
     let mut annotations = Vec::new();
@@ -457,7 +477,9 @@ fn read_annotations<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Resul
             // Format: +onset\x15duration\x14annotation\x14\x00
             let tal_str = String::from_utf8_lossy(tal_data);
             for entry in tal_str.split('\x00') {
-                if entry.is_empty() { continue; }
+                if entry.is_empty() {
+                    continue;
+                }
                 parse_tal_entry(entry, &mut annotations);
             }
         }
@@ -469,14 +491,18 @@ fn read_annotations<R: Read + Seek>(reader: &mut R, header: &EdfHeader) -> Resul
 fn parse_tal_entry(entry: &str, annotations: &mut Vec<EdfAnnotation>) {
     // TAL entry format: +onset[\x15duration]\x14annotation[\x14annotation...]
     let parts: Vec<&str> = entry.split('\x14').collect();
-    if parts.is_empty() { return; }
+    if parts.is_empty() {
+        return;
+    }
 
     let time_part = parts[0];
-    if time_part.is_empty() { return; }
+    if time_part.is_empty() {
+        return;
+    }
 
     // Parse onset and optional duration separated by \x15
     let (onset_str, dur_str) = if let Some(pos) = time_part.find('\x15') {
-        (&time_part[..pos], &time_part[pos+1..])
+        (&time_part[..pos], &time_part[pos + 1..])
     } else {
         (time_part, "")
     };
@@ -493,7 +519,9 @@ fn parse_tal_entry(entry: &str, annotations: &mut Vec<EdfAnnotation>) {
     };
 
     for &desc in &parts[1..] {
-        if desc.is_empty() { continue; }
+        if desc.is_empty() {
+            continue;
+        }
         annotations.push(EdfAnnotation {
             onset,
             duration,
@@ -528,11 +556,15 @@ mod tests {
     #[test]
     fn test_unit_scale() {
         let mut sig = SignalHeader {
-            label: String::new(), transducer: String::new(),
+            label: String::new(),
+            transducer: String::new(),
             physical_dimension: "uV".into(),
-            physical_min: 0.0, physical_max: 0.0,
-            digital_min: 0.0, digital_max: 0.0,
-            prefiltering: String::new(), samples_per_record: 0,
+            physical_min: 0.0,
+            physical_max: 0.0,
+            digital_min: 0.0,
+            digital_max: 0.0,
+            prefiltering: String::new(),
+            samples_per_record: 0,
             reserved: String::new(),
         };
         assert_eq!(sig.unit_scale(), 1e-6);

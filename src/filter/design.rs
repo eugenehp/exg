@@ -34,7 +34,11 @@ pub fn auto_trans_bandwidth_lowpass(h_freq: f32, sfreq: f32) -> f32 {
 pub fn auto_filter_length(trans_bw: f32, sfreq: f32) -> usize {
     let n_raw = (3.3 / trans_bw as f64 * sfreq as f64).ceil() as usize;
     // Make odd.
-    if n_raw.is_multiple_of(2) { n_raw + 1 } else { n_raw }
+    if n_raw.is_multiple_of(2) {
+        n_raw + 1
+    } else {
+        n_raw
+    }
 }
 
 // ── MNE's _firwin_design — the core algorithm ──────────────────────────────
@@ -231,7 +235,12 @@ pub fn design_bandpass(l_freq: f32, h_freq: f32, sfreq: f32) -> Vec<f32> {
 ///
 /// Default `notch_width`: `freq / 200.0` (MNE default).
 /// Default `trans_bandwidth`: `1.0` Hz (MNE default).
-pub fn design_notch(freq: f32, sfreq: f32, notch_width: Option<f32>, trans_bandwidth: Option<f32>) -> Vec<f32> {
+pub fn design_notch(
+    freq: f32,
+    sfreq: f32,
+    notch_width: Option<f32>,
+    trans_bandwidth: Option<f32>,
+) -> Vec<f32> {
     let nw = notch_width.unwrap_or(freq / 200.0);
     let tb = trans_bandwidth.unwrap_or(1.0);
     let nyq = sfreq / 2.0;
@@ -257,10 +266,10 @@ pub fn design_notch(freq: f32, sfreq: f32, notch_width: Option<f32>, trans_bandw
     let tb_f64 = tb as f64;
     let nyq_f64 = nyq as f64;
 
-    let f_p1 = freq_f64 - nw_f64 / 2.0 - tb_f64 / 2.0;  // pass edge below
-    let f_s1 = freq_f64 - nw_f64 / 2.0;                    // stop edge below
-    let f_s2 = freq_f64 + nw_f64 / 2.0;                    // stop edge above
-    let f_p2 = freq_f64 + nw_f64 / 2.0 + tb_f64 / 2.0;    // pass edge above
+    let f_p1 = freq_f64 - nw_f64 / 2.0 - tb_f64 / 2.0; // pass edge below
+    let f_s1 = freq_f64 - nw_f64 / 2.0; // stop edge below
+    let f_s2 = freq_f64 + nw_f64 / 2.0; // stop edge above
+    let f_p2 = freq_f64 + nw_f64 / 2.0 + tb_f64 / 2.0; // pass edge above
 
     // Filter length from tb/2 (the transition bandwidth used for both sides)
     let n = auto_filter_length(tb / 2.0, sfreq);
@@ -303,7 +312,11 @@ fn firwin_f64(n: usize, cutoff_hz: f64, sfreq: f64) -> Vec<f64> {
     let mut h: Vec<f64> = (0..n)
         .map(|i| {
             let x = i as f64 - alpha;
-            let sinc = if x == 0.0 { fc } else { (PI * fc * x).sin() / (PI * x) };
+            let sinc = if x == 0.0 {
+                fc
+            } else {
+                (PI * fc * x).sin() / (PI * x)
+            };
             sinc * win[i]
         })
         .collect();
@@ -324,14 +337,18 @@ pub fn firwin(n: usize, cutoff_hz: f32, sfreq: f32, pass_zero: bool) -> Vec<f64>
     assert!(n % 2 == 1, "firwin requires odd N for linear-phase filter");
     let alpha = (n - 1) as f64 / 2.0;
     let nyq = sfreq as f64 / 2.0;
-    let fc = cutoff_hz as f64 / nyq;   // normalised [0, 1]
+    let fc = cutoff_hz as f64 / nyq; // normalised [0, 1]
 
     let win = hamming(n);
 
     let mut h: Vec<f64> = (0..n)
         .map(|i| {
             let x = i as f64 - alpha;
-            let sinc = if x == 0.0 { fc } else { (PI * fc * x).sin() / (PI * x) };
+            let sinc = if x == 0.0 {
+                fc
+            } else {
+                (PI * fc * x).sin() / (PI * x)
+            };
             sinc * win[i]
         })
         .collect();
@@ -366,7 +383,7 @@ mod tests {
     fn filter_length_is_odd() {
         for l_freq in [0.5_f32, 1.0, 2.0, 5.0] {
             let tb = auto_trans_bandwidth(l_freq);
-            let n  = auto_filter_length(tb, 256.0);
+            let n = auto_filter_length(tb, 256.0);
             assert!(n % 2 == 1, "N={n} is even for l_freq={l_freq}");
         }
     }

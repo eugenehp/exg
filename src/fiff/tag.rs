@@ -14,8 +14,8 @@
 //! `next == 0` means the next tag follows immediately (pos + 16 + size).
 //! `next  > 0` means seek to byte offset `next`.
 //! `next == -1` means there is no next tag (end of sequence).
-use std::io::{Read, Seek, SeekFrom};
 use anyhow::{bail, Context, Result};
+use std::io::{Read, Seek, SeekFrom};
 
 use super::constants::*;
 
@@ -26,10 +26,10 @@ use super::constants::*;
 /// Header of a single FIFF tag (kind, type, size, position).
 pub struct TagHeader {
     pub kind: i32,
-    pub ftype: u32,   // "type" is a Rust keyword
+    pub ftype: u32, // "type" is a Rust keyword
     pub size: i32,
     pub next: i32,
-    pub pos: u64,     // byte offset of the header in the file
+    pub pos: u64, // byte offset of the header in the file
 }
 
 impl TagHeader {
@@ -53,16 +53,18 @@ impl TagHeader {
 
 /// Read only the 16-byte tag header at the given file position.
 pub fn read_tag_header<R: Read + Seek>(reader: &mut R, pos: u64) -> Result<TagHeader> {
-    reader.seek(SeekFrom::Start(pos))
+    reader
+        .seek(SeekFrom::Start(pos))
         .with_context(|| format!("seek to tag header @ {pos:#x}"))?;
     let mut buf = [0u8; 16];
-    reader.read_exact(&mut buf)
+    reader
+        .read_exact(&mut buf)
         .with_context(|| format!("read tag header @ {pos:#x}"))?;
     Ok(TagHeader {
-        kind:  i32::from_be_bytes(buf[0..4].try_into().unwrap()),
+        kind: i32::from_be_bytes(buf[0..4].try_into().unwrap()),
         ftype: u32::from_be_bytes(buf[4..8].try_into().unwrap()),
-        size:  i32::from_be_bytes(buf[8..12].try_into().unwrap()),
-        next:  i32::from_be_bytes(buf[12..16].try_into().unwrap()),
+        size: i32::from_be_bytes(buf[8..12].try_into().unwrap()),
+        next: i32::from_be_bytes(buf[12..16].try_into().unwrap()),
         pos,
     })
 }
@@ -157,10 +159,7 @@ pub fn read_raw_bytes<R: Read + Seek>(reader: &mut R, tag: &TagHeader) -> Result
 /// Read a directory of tag headers embedded in a `FIFF_DIR_POINTER` tag.
 /// Each entry is a 16-byte structure identical to a tag header, but the
 /// `next` field stores the real file position of that tag.
-pub fn read_directory<R: Read + Seek>(
-    reader: &mut R,
-    tag: &TagHeader,
-) -> Result<Vec<TagHeader>> {
+pub fn read_directory<R: Read + Seek>(reader: &mut R, tag: &TagHeader) -> Result<Vec<TagHeader>> {
     if tag.ftype != FIFFT_DIR_ENTRY_STRUCT {
         bail!("expected FIFFT_DIR_ENTRY_STRUCT, got {}", tag.ftype);
     }
@@ -170,11 +169,17 @@ pub fn read_directory<R: Read + Seek>(
     let mut buf = [0u8; 16];
     for _ in 0..n {
         reader.read_exact(&mut buf)?;
-        let kind  = i32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let kind = i32::from_be_bytes(buf[0..4].try_into().unwrap());
         let ftype = u32::from_be_bytes(buf[4..8].try_into().unwrap());
-        let size  = i32::from_be_bytes(buf[8..12].try_into().unwrap());
-        let pos   = u32::from_be_bytes(buf[12..16].try_into().unwrap()) as u64;
-        entries.push(TagHeader { kind, ftype, size, next: FIFFV_NEXT_NONE, pos });
+        let size = i32::from_be_bytes(buf[8..12].try_into().unwrap());
+        let pos = u32::from_be_bytes(buf[12..16].try_into().unwrap()) as u64;
+        entries.push(TagHeader {
+            kind,
+            ftype,
+            size,
+            next: FIFFV_NEXT_NONE,
+            pos,
+        });
     }
     Ok(entries)
 }
@@ -213,9 +218,9 @@ mod tests {
 
         let mut cursor = Cursor::new(buf);
         let tag = read_tag_header(&mut cursor, 0).unwrap();
-        assert_eq!(tag.kind,  FIFF_NCHAN);
+        assert_eq!(tag.kind, FIFF_NCHAN);
         assert_eq!(tag.ftype, FIFFT_INT);
-        assert_eq!(tag.size,  4);
+        assert_eq!(tag.size, 4);
         assert_eq!(read_i32(&mut cursor, &tag).unwrap(), 42);
     }
 
@@ -234,19 +239,37 @@ mod tests {
 
     #[test]
     fn next_pos_sequential() {
-        let tag = TagHeader { kind: 1, ftype: 3, size: 8, next: 0, pos: 100 };
+        let tag = TagHeader {
+            kind: 1,
+            ftype: 3,
+            size: 8,
+            next: 0,
+            pos: 100,
+        };
         assert_eq!(tag.next_pos(), Some(124)); // 100 + 16 + 8
     }
 
     #[test]
     fn next_pos_explicit() {
-        let tag = TagHeader { kind: 1, ftype: 3, size: 8, next: 5000, pos: 100 };
+        let tag = TagHeader {
+            kind: 1,
+            ftype: 3,
+            size: 8,
+            next: 5000,
+            pos: 100,
+        };
         assert_eq!(tag.next_pos(), Some(5000));
     }
 
     #[test]
     fn next_pos_none() {
-        let tag = TagHeader { kind: 1, ftype: 3, size: 8, next: -1, pos: 100 };
+        let tag = TagHeader {
+            kind: 1,
+            ftype: 3,
+            size: 8,
+            next: -1,
+            pos: 100,
+        };
         assert_eq!(tag.next_pos(), None);
     }
 

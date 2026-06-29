@@ -201,9 +201,12 @@ pub fn prepare_inverse(
             Some(compute_noise_norm(inv, &noise_weight, n_orient))
         }
         InverseMethod::SLORETA => {
-            let noise_weight = Array1::from_iter(reginv.iter().zip(inv.sing.iter()).map(
-                |(&ri, &si)| ri * (1.0 + si * si / lambda2).sqrt(),
-            ));
+            let noise_weight = Array1::from_iter(
+                reginv
+                    .iter()
+                    .zip(inv.sing.iter())
+                    .map(|(&ri, &si)| ri * (1.0 + si * si / lambda2).sqrt()),
+            );
             Some(compute_noise_norm(inv, &noise_weight, n_orient))
         }
         InverseMethod::ELORETA => unreachable!(),
@@ -557,9 +560,8 @@ mod tests {
         for i in 0..n_chan {
             for j in 0..n_src {
                 // Distance-like falloff
-                let dist = ((i as f64 - j as f64 * n_chan as f64 / n_src as f64).powi(2)
-                    + 1.0)
-                    .sqrt();
+                let dist =
+                    ((i as f64 - j as f64 * n_chan as f64 / n_src as f64).powi(2) + 1.0).sqrt();
                 gain[[i, j]] = 1e-8 / dist;
             }
         }
@@ -626,8 +628,7 @@ mod tests {
         let (fwd, cov) = make_test_setup(16, 50);
         let inv = make_inverse_operator(&fwd, &cov, None).unwrap();
         let data = Array2::from_elem((16, 5), 1e-6);
-        let stc =
-            apply_inverse(&data, &inv, 1.0 / 9.0, InverseMethod::SLORETA).unwrap();
+        let stc = apply_inverse(&data, &inv, 1.0 / 9.0, InverseMethod::SLORETA).unwrap();
         assert_eq!(stc.data.nrows(), 50);
         assert!(stc.data.iter().all(|v| v.is_finite()));
     }
@@ -639,8 +640,7 @@ mod tests {
         let mut gain = Array2::zeros((n_chan, n_src * 3));
         for i in 0..n_chan {
             for j in 0..n_src * 3 {
-                let dist = ((i as f64 - j as f64 / 3.0 * n_chan as f64 / n_src as f64)
-                    .powi(2)
+                let dist = ((i as f64 - j as f64 / 3.0 * n_chan as f64 / n_src as f64).powi(2)
                     + 1.0)
                     .sqrt();
                 gain[[i, j]] = 1e-8 / dist;
@@ -680,8 +680,7 @@ mod tests {
         let mut gain = Array2::zeros((n_chan, n_src * 3));
         for i in 0..n_chan {
             for j in 0..n_src * 3 {
-                let dist = ((i as f64 - j as f64 / 3.0 * n_chan as f64 / n_src as f64)
-                    .powi(2)
+                let dist = ((i as f64 - j as f64 / 3.0 * n_chan as f64 / n_src as f64).powi(2)
                     + 1.0)
                     .sqrt();
                 gain[[i, j]] = 1e-8 / dist;
@@ -695,21 +694,36 @@ mod tests {
 
         // Vector: should return n_src*3 rows
         let stc_vec = apply_inverse_full(
-            &data, &inv, 1.0 / 9.0, InverseMethod::MNE, PickOri::Vector, None,
+            &data,
+            &inv,
+            1.0 / 9.0,
+            InverseMethod::MNE,
+            PickOri::Vector,
+            None,
         )
         .unwrap();
         assert_eq!(stc_vec.data.nrows(), n_src * 3);
 
         // Normal: should return n_src rows
         let stc_norm = apply_inverse_full(
-            &data, &inv, 1.0 / 9.0, InverseMethod::MNE, PickOri::Normal, None,
+            &data,
+            &inv,
+            1.0 / 9.0,
+            InverseMethod::MNE,
+            PickOri::Normal,
+            None,
         )
         .unwrap();
         assert_eq!(stc_norm.data.nrows(), n_src);
 
         // Default (None): should return n_src rows (combined)
         let stc_comb = apply_inverse_full(
-            &data, &inv, 1.0 / 9.0, InverseMethod::MNE, PickOri::None, None,
+            &data,
+            &inv,
+            1.0 / 9.0,
+            InverseMethod::MNE,
+            PickOri::None,
+            None,
         )
         .unwrap();
         assert_eq!(stc_comb.data.nrows(), n_src);

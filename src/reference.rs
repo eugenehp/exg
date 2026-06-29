@@ -24,9 +24,7 @@ mod tests {
 
     #[test]
     fn channel_sum_is_zero_after_reference() {
-        let mut data = Array2::from_shape_fn((8, 512), |(c, t)| {
-            ((c * 7 + t * 3) as f32).sin()
-        });
+        let mut data = Array2::from_shape_fn((8, 512), |(c, t)| ((c * 7 + t * 3) as f32).sin());
         average_reference_inplace(&mut data);
         // Column sums should be ≈ 0.
         let col_sums = data.sum_axis(Axis(0));
@@ -50,11 +48,7 @@ mod tests {
         let mut data = Array2::from_shape_fn((2, 10), |(c, _)| if c == 0 { 2.0_f32 } else { 4.0 });
         average_reference_inplace(&mut data);
         for t in 0..10 {
-            approx::assert_abs_diff_eq!(
-                data[[0, t]] - data[[1, t]],
-                -2.0_f32,
-                epsilon = 1e-6
-            );
+            approx::assert_abs_diff_eq!(data[[0, t]] - data[[1, t]], -2.0_f32, epsilon = 1e-6);
         }
     }
 }

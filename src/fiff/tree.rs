@@ -4,8 +4,8 @@
 //!
 //! The tree is built by scanning all tag headers sequentially and grouping
 //! them into blocks delimited by `FIFF_BLOCK_START` / `FIFF_BLOCK_END` tags.
-use std::io::{Read, Seek};
 use anyhow::Result;
+use std::io::{Read, Seek};
 
 use super::constants::*;
 use super::tag::{read_i32, read_tag_header, TagHeader};
@@ -17,9 +17,9 @@ use super::tag::{read_i32, read_tag_header, TagHeader};
 pub struct Node {
     /// Block kind (e.g. `FIFFB_MEAS`, `FIFFB_RAW_DATA`, …).
     /// 0 = root / unknown.
-    pub block:    i32,
+    pub block: i32,
     /// All non-structural tag headers in this node (not including BLOCK_START/END).
-    pub entries:  Vec<TagHeader>,
+    pub entries: Vec<TagHeader>,
     /// Child nodes.
     pub children: Vec<Node>,
 }
@@ -110,8 +110,8 @@ fn build_tree_resolved<R: Read + Seek>(
     root: &mut Node,
 ) -> Result<()> {
     let mut stack: Vec<Node> = vec![Node {
-        block:    0, // root
-        entries:  Vec::new(),
+        block: 0, // root
+        entries: Vec::new(),
         children: Vec::new(),
     }];
 
@@ -120,8 +120,8 @@ fn build_tree_resolved<R: Read + Seek>(
             FIFF_BLOCK_START => {
                 let block_kind = read_i32(reader, &tag).unwrap_or(0);
                 stack.push(Node {
-                    block:    block_kind,
-                    entries:  Vec::new(),
+                    block: block_kind,
+                    entries: Vec::new(),
                     children: Vec::new(),
                 });
             }
@@ -208,7 +208,11 @@ mod tests {
         spec.iter()
             .enumerate()
             .map(|(i, &(kind, ftype, size, next))| TagHeader {
-                kind, ftype, size, next, pos: (i as u64) * 100,
+                kind,
+                ftype,
+                size,
+                next,
+                pos: (i as u64) * 100,
             })
             .collect()
     }
@@ -229,8 +233,8 @@ mod tests {
     fn single_block() {
         let dir = make_flat_dir(&[
             (FIFF_BLOCK_START, FIFFT_INT, 4, 0), // FIFFB_MEAS
-            (FIFF_NCHAN,       FIFFT_INT, 4, 0),
-            (FIFF_BLOCK_END,   FIFFT_INT, 4, 0),
+            (FIFF_NCHAN, FIFFT_INT, 4, 0),
+            (FIFF_BLOCK_END, FIFFT_INT, 4, 0),
         ]);
         let root = build_tree(&dir);
         assert_eq!(root.children.len(), 1);
@@ -242,16 +246,16 @@ mod tests {
         let dir = make_flat_dir(&[
             (FIFF_BLOCK_START, FIFFT_INT, 4, 0), // outer
             (FIFF_BLOCK_START, FIFFT_INT, 4, 0), // inner
-            (FIFF_NCHAN,       FIFFT_INT, 4, 0),
-            (FIFF_BLOCK_END,   FIFFT_INT, 4, 0), // close inner
-            (FIFF_SFREQ,       FIFFT_FLOAT, 4, 0),
-            (FIFF_BLOCK_END,   FIFFT_INT, 4, 0), // close outer
+            (FIFF_NCHAN, FIFFT_INT, 4, 0),
+            (FIFF_BLOCK_END, FIFFT_INT, 4, 0), // close inner
+            (FIFF_SFREQ, FIFFT_FLOAT, 4, 0),
+            (FIFF_BLOCK_END, FIFFT_INT, 4, 0), // close outer
         ]);
         let root = build_tree(&dir);
-        assert_eq!(root.children.len(), 1);           // outer
+        assert_eq!(root.children.len(), 1); // outer
         let outer = &root.children[0];
-        assert_eq!(outer.children.len(), 1);          // inner
-        assert_eq!(outer.entries.len(), 1);           // SFREQ
+        assert_eq!(outer.children.len(), 1); // inner
+        assert_eq!(outer.entries.len(), 1); // SFREQ
         assert_eq!(outer.children[0].entries.len(), 1); // NCHAN
     }
 
@@ -260,9 +264,9 @@ mod tests {
         let dir = make_flat_dir(&[
             (FIFF_BLOCK_START, FIFFT_INT, 4, 0),
             (FIFF_BLOCK_START, FIFFT_INT, 4, 0),
-            (FIFF_NCHAN,       FIFFT_INT, 4, 0),
-            (FIFF_BLOCK_END,   FIFFT_INT, 4, 0),
-            (FIFF_BLOCK_END,   FIFFT_INT, 4, 0),
+            (FIFF_NCHAN, FIFFT_INT, 4, 0),
+            (FIFF_BLOCK_END, FIFFT_INT, 4, 0),
+            (FIFF_BLOCK_END, FIFFT_INT, 4, 0),
         ]);
         let root = build_tree(&dir);
         // block kinds not set (no file reads in pure-flat test), but

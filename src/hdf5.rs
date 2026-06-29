@@ -50,14 +50,14 @@ pub struct HDF5Sample {
 /// Returns a flat `Vec<HDF5Sample>` with all samples from all groups.
 pub fn read_dataset<P: AsRef<Path>>(path: P) -> Result<Vec<HDF5Sample>> {
     let path = path.as_ref();
-    let file = hdf5::File::open(path)
-        .with_context(|| format!("opening HDF5 file: {}", path.display()))?;
+    let file =
+        hdf5::File::open(path).with_context(|| format!("opening HDF5 file: {}", path.display()))?;
 
     let mut samples = Vec::new();
 
     // Iterate over all groups in the file
-    let mut group_names: Vec<String> = file.member_names()
-        .with_context(|| "listing HDF5 groups")?;
+    let mut group_names: Vec<String> =
+        file.member_names().with_context(|| "listing HDF5 groups")?;
     group_names.sort(); // Ensure deterministic order
 
     for group_name in &group_names {
@@ -67,7 +67,8 @@ pub fn read_dataset<P: AsRef<Path>>(path: P) -> Result<Vec<HDF5Sample>> {
         };
 
         // Read X dataset
-        let x_ds = group.dataset("X")
+        let x_ds = group
+            .dataset("X")
             .with_context(|| format!("reading X from group {group_name}"))?;
 
         let x_shape = x_ds.shape();
@@ -75,7 +76,8 @@ pub fn read_dataset<P: AsRef<Path>>(path: P) -> Result<Vec<HDF5Sample>> {
             bail!("X in {group_name} has unexpected shape: {x_shape:?}");
         }
 
-        let x_data: Vec<f32> = x_ds.read_raw()
+        let x_data: Vec<f32> = x_ds
+            .read_raw()
             .with_context(|| format!("reading X data from {group_name}"))?;
 
         // Determine shape: could be [N, C, T] or [N, T] (single channel)
@@ -84,14 +86,16 @@ pub fn read_dataset<P: AsRef<Path>>(path: P) -> Result<Vec<HDF5Sample>> {
         } else if x_shape.len() == 2 {
             (x_shape[0], 1, x_shape[1])
         } else {
-            bail!("X in {group_name} has unsupported dimensionality: {}", x_shape.len());
+            bail!(
+                "X in {group_name} has unsupported dimensionality: {}",
+                x_shape.len()
+            );
         };
 
         // Read optional y dataset
         let labels: Option<Vec<i64>> = match group.dataset("y") {
             Ok(y_ds) => {
-                let y_data: Vec<i64> = y_ds.read_raw()
-                    .unwrap_or_default();
+                let y_data: Vec<i64> = y_ds.read_raw().unwrap_or_default();
                 if y_data.len() == n_samples {
                     Some(y_data)
                 } else {

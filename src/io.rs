@@ -20,16 +20,11 @@ fn parse_header(bytes: &[u8]) -> Result<(HashMap<String, serde_json::Value>, usi
     }
     let n = u64::from_le_bytes(bytes[..8].try_into().unwrap()) as usize;
     let header: HashMap<String, serde_json::Value> =
-        serde_json::from_slice(&bytes[8..8 + n])
-            .context("failed to parse safetensors header")?;
+        serde_json::from_slice(&bytes[8..8 + n]).context("failed to parse safetensors header")?;
     Ok((header, 8 + n))
 }
 
-fn read_f32_tensor(
-    bytes: &[u8],
-    data_start: usize,
-    entry: &serde_json::Value,
-) -> Result<Vec<f32>> {
+fn read_f32_tensor(bytes: &[u8], data_start: usize, entry: &serde_json::Value) -> Result<Vec<f32>> {
     let offsets = entry["data_offsets"].as_array().unwrap();
     let s = offsets[0].as_u64().unwrap() as usize;
     let e = offsets[1].as_u64().unwrap() as usize;
@@ -97,7 +92,12 @@ impl RawData {
             vec![]
         };
 
-        Ok(RawData { data, chan_pos, sfreq, ch_names })
+        Ok(RawData {
+            data,
+            chan_pos,
+            sfreq,
+            ch_names,
+        })
     }
 }
 
@@ -129,7 +129,8 @@ impl StWriter {
     /// Add a named F32 tensor.
     pub fn add_f32(&mut self, name: &str, data: &[f32], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.entries.push((name.to_string(), bytes, "F32", shape.to_vec()));
+        self.entries
+            .push((name.to_string(), bytes, "F32", shape.to_vec()));
     }
 
     /// Add a named F32 tensor from an `Array2`.
@@ -141,7 +142,8 @@ impl StWriter {
     /// Add a named F64 tensor.
     pub fn add_f64(&mut self, name: &str, data: &[f64], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.entries.push((name.to_string(), bytes, "F64", shape.to_vec()));
+        self.entries
+            .push((name.to_string(), bytes, "F64", shape.to_vec()));
     }
 
     /// Add a named F64 tensor from an `Array2`.
@@ -153,7 +155,8 @@ impl StWriter {
     /// Add a named I32 tensor.
     pub fn add_i32(&mut self, name: &str, data: &[i32], shape: &[usize]) {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.entries.push((name.to_string(), bytes, "I32", shape.to_vec()));
+        self.entries
+            .push((name.to_string(), bytes, "I32", shape.to_vec()));
     }
 
     /// Write all tensors to a safetensors file.
@@ -162,16 +165,20 @@ impl StWriter {
         let mut header_map = serde_json::Map::new();
         let mut offset: usize = 0;
         for (name, data, dtype, shape) in &self.entries {
-            header_map.insert(name.clone(), serde_json::json!({
-                "dtype": dtype,
-                "shape": shape,
-                "data_offsets": [offset, offset + data.len()],
-            }));
+            header_map.insert(
+                name.clone(),
+                serde_json::json!({
+                    "dtype": dtype,
+                    "shape": shape,
+                    "data_offsets": [offset, offset + data.len()],
+                }),
+            );
             offset += data.len();
         }
         let hdr_bytes = serde_json::to_vec(&header_map)?;
         let pad = (8 - hdr_bytes.len() % 8) % 8;
-        let padded: Vec<u8> = hdr_bytes.into_iter()
+        let padded: Vec<u8> = hdr_bytes
+            .into_iter()
             .chain(std::iter::repeat_n(b' ', pad))
             .collect();
         let mut f = std::fs::File::create(path)?;
@@ -189,11 +196,7 @@ impl StWriter {
 /// Write preprocessed epochs to `batch.safetensors`.
 ///
 /// `epochs[e]`: [C, 1280]   `positions[e]`: [C, 3]
-pub fn write_batch(
-    epochs: &[Array2<f32>],
-    positions: &[Array2<f32>],
-    path: &Path,
-) -> Result<()> {
+pub fn write_batch(epochs: &[Array2<f32>], positions: &[Array2<f32>], path: &Path) -> Result<()> {
     use std::io::Write;
 
     let n = epochs.len();
@@ -203,21 +206,17 @@ pub fn write_batch(
     let mut tensors: Vec<(String, Vec<u8>, Vec<usize>)> = vec![];
 
     for i in 0..n {
-        let eeg  = &epochs[i];
-        let pos  = &positions[i];
+        let eeg = &epochs[i];
+        let pos = &positions[i];
 
-        let eeg_bytes: Vec<u8> = eeg.iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
+        let eeg_bytes: Vec<u8> = eeg.iter().flat_map(|v| v.to_le_bytes()).collect();
         tensors.push((
             format!("eeg_{i}"),
             eeg_bytes,
             vec![eeg.nrows(), eeg.ncols()],
         ));
 
-        let pos_bytes: Vec<u8> = pos.iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
+        let pos_bytes: Vec<u8> = pos.iter().flat_map(|v| v.to_le_bytes()).collect();
         tensors.push((
             format!("chan_pos_{i}"),
             pos_bytes,
@@ -239,11 +238,14 @@ pub fn write_batch(
 
     for (name, data, shape) in &tensors {
         let dtype = if name == "n_samples" { "I32" } else { "F32" };
-        header_map.insert(name.clone(), serde_json::json!({
-            "dtype": dtype,
-            "shape": shape,
-            "data_offsets": [offset, offset + data.len()],
-        }));
+        header_map.insert(
+            name.clone(),
+            serde_json::json!({
+                "dtype": dtype,
+                "shape": shape,
+                "data_offsets": [offset, offset + data.len()],
+            }),
+        );
         dtype_map.push((name.clone(), dtype.to_string()));
         offset += data.len();
     }

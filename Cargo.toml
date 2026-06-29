@@ -1,6 +1,6 @@
 [package]
 name          = "exg"
-version       = "0.0.5"
+version       = "0.0.6"
 edition       = "2021"
 description   = "EXG (EEG/ECG/EMG) preprocessing — native Rust DSP + FIF reader, numerical parity with MNE-Python"
 keywords      = ["exg", "eeg", "ecg", "emg", "mne"]
@@ -48,6 +48,7 @@ serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
 anyhow      = "1"
 clap        = { version = "4", features = ["derive"] }
+memmap2     = "0.9"
 exg-source  = { version = "0.0.5", path = "exg-source", optional = true }
 hdf5        = { version = "0.8", optional = true }
 

@@ -34,7 +34,8 @@ pub fn read_eeg<P: AsRef<Path>>(path: P) -> Result<(Array2<f32>, Vec<String>, f3
     let content = std::fs::read_to_string(path.as_ref())
         .with_context(|| format!("reading CSV: {}", path.as_ref().display()))?;
 
-    let lines: Vec<&str> = content.lines()
+    let lines: Vec<&str> = content
+        .lines()
         .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'))
         .collect();
 
@@ -68,10 +69,16 @@ pub fn read_eeg<P: AsRef<Path>>(path: P) -> Result<(Array2<f32>, Vec<String>, f3
     for (line_idx, line) in data_lines.iter().enumerate() {
         let fields: Vec<&str> = line.split(delim).map(|s| s.trim()).collect();
         if fields.len() != n_cols {
-            bail!("Row {} has {} columns, expected {}", line_idx + 1, fields.len(), n_cols);
+            bail!(
+                "Row {} has {} columns, expected {}",
+                line_idx + 1,
+                fields.len(),
+                n_cols
+            );
         }
         for field in &fields {
-            let val = field.parse::<f64>()
+            let val = field
+                .parse::<f64>()
                 .with_context(|| format!("parsing value '{}' at row {}", field, line_idx + 1))?;
             raw_data.push(val as f32);
         }
@@ -80,7 +87,9 @@ pub fn read_eeg<P: AsRef<Path>>(path: P) -> Result<(Array2<f32>, Vec<String>, f3
     // Detect timestamp column (first column that is monotonically increasing with > 0 diff)
     let mut timestamp_col: Option<usize> = None;
     'col_loop: for col in 0..n_cols {
-        if n_rows < 2 { break; }
+        if n_rows < 2 {
+            break;
+        }
         let mut prev = raw_data[col];
         for row in 1..n_rows {
             let val = raw_data[row * n_cols + col];
@@ -97,7 +106,11 @@ pub fn read_eeg<P: AsRef<Path>>(path: P) -> Result<(Array2<f32>, Vec<String>, f3
     let sfreq = if let Some(ts_col) = timestamp_col {
         if n_rows >= 2 {
             let dt = raw_data[n_cols + ts_col] - raw_data[ts_col];
-            if dt > 0.0 { 1.0 / dt } else { 0.0 }
+            if dt > 0.0 {
+                1.0 / dt
+            } else {
+                0.0
+            }
         } else {
             0.0
         }
@@ -106,9 +119,7 @@ pub fn read_eeg<P: AsRef<Path>>(path: P) -> Result<(Array2<f32>, Vec<String>, f3
     };
 
     // Build data array excluding timestamp column
-    let data_cols: Vec<usize> = (0..n_cols)
-        .filter(|&c| Some(c) != timestamp_col)
-        .collect();
+    let data_cols: Vec<usize> = (0..n_cols).filter(|&c| Some(c) != timestamp_col).collect();
     let n_ch = data_cols.len();
 
     let mut data = Array2::<f32>::zeros((n_ch, n_rows));

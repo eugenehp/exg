@@ -2,8 +2,8 @@
 //!
 //! We read only the fields needed for EEG preprocessing; MEG-specific fields
 //! (projections, CTF compensations, HPI, …) are intentionally omitted.
-use std::io::{Read, Seek};
 use anyhow::{bail, Result};
+use std::io::{Read, Seek};
 
 use super::constants::*;
 use super::tag::*;
@@ -31,17 +31,17 @@ use super::tree::Node;
 #[derive(Debug, Clone)]
 /// Per-channel information parsed from the FIFF 96-byte channel info struct.
 pub struct ChannelInfo {
-    pub scan_no:   i32,
-    pub log_no:    i32,
-    pub kind:      i32,
-    pub range:     f32,
-    pub cal:       f32,
+    pub scan_no: i32,
+    pub log_no: i32,
+    pub kind: i32,
+    pub range: f32,
+    pub cal: f32,
     pub coil_type: i32,
     /// Position + orientation: `[x, y, z, nx0, ny0, nz0, …]` in metres.
-    pub loc:       [f32; 12],
-    pub unit:      i32,
-    pub unit_mul:  i32,
-    pub name:      String,
+    pub loc: [f32; 12],
+    pub unit: i32,
+    pub unit_mul: i32,
+    pub name: String,
 }
 
 impl ChannelInfo {
@@ -59,23 +59,34 @@ impl ChannelInfo {
         if raw.len() < 96 {
             bail!("ch_info payload too short: {} bytes (need 96)", raw.len());
         }
-        let scan_no   = i32::from_be_bytes(raw[0..4].try_into().unwrap());
-        let log_no    = i32::from_be_bytes(raw[4..8].try_into().unwrap());
-        let kind      = i32::from_be_bytes(raw[8..12].try_into().unwrap());
-        let range     = f32::from_be_bytes(raw[12..16].try_into().unwrap());
-        let cal       = f32::from_be_bytes(raw[16..20].try_into().unwrap());
+        let scan_no = i32::from_be_bytes(raw[0..4].try_into().unwrap());
+        let log_no = i32::from_be_bytes(raw[4..8].try_into().unwrap());
+        let kind = i32::from_be_bytes(raw[8..12].try_into().unwrap());
+        let range = f32::from_be_bytes(raw[12..16].try_into().unwrap());
+        let cal = f32::from_be_bytes(raw[16..20].try_into().unwrap());
         let coil_type = i32::from_be_bytes(raw[20..24].try_into().unwrap());
-        let mut loc   = [0f32; 12];
+        let mut loc = [0f32; 12];
         for (i, v) in loc.iter_mut().enumerate() {
             *v = f32::from_be_bytes(raw[24 + i * 4..24 + i * 4 + 4].try_into().unwrap());
         }
-        let unit      = i32::from_be_bytes(raw[72..76].try_into().unwrap());
-        let unit_mul  = i32::from_be_bytes(raw[76..80].try_into().unwrap());
+        let unit = i32::from_be_bytes(raw[72..76].try_into().unwrap());
+        let unit_mul = i32::from_be_bytes(raw[76..80].try_into().unwrap());
         // Channel name: null-terminated Latin-1, 16 bytes
         let name_bytes = &raw[80..96];
         let end = name_bytes.iter().position(|&b| b == 0).unwrap_or(16);
         let name = name_bytes[..end].iter().map(|&b| b as char).collect();
-        Ok(ChannelInfo { scan_no, log_no, kind, range, cal, coil_type, loc, unit, unit_mul, name })
+        Ok(ChannelInfo {
+            scan_no,
+            log_no,
+            kind,
+            range,
+            cal,
+            coil_type,
+            loc,
+            unit,
+            unit_mul,
+            name,
+        })
     }
 }
 
@@ -86,15 +97,15 @@ impl ChannelInfo {
 /// Corresponds to MNE's `Info` object, restricted to fields we actually use.
 #[derive(Debug, Clone)]
 pub struct MeasInfo {
-    pub n_chan:     usize,
-    pub sfreq:     f64,
-    pub lowpass:   Option<f64>,
-    pub highpass:  Option<f64>,
+    pub n_chan: usize,
+    pub sfreq: f64,
+    pub lowpass: Option<f64>,
+    pub highpass: Option<f64>,
     pub line_freq: Option<f64>,
-    pub chs:       Vec<ChannelInfo>,
+    pub chs: Vec<ChannelInfo>,
     pub bad_ch_names: Vec<String>,
     pub experimenter: Option<String>,
-    pub description:  Option<String>,
+    pub description: Option<String>,
 }
 
 impl MeasInfo {
@@ -119,15 +130,15 @@ pub fn read_meas_info<R: Read + Seek>(reader: &mut R, tree: &Node) -> Result<Mea
         .find_block(FIFFB_MEAS_INFO)
         .ok_or_else(|| anyhow::anyhow!("FIFFB_MEAS_INFO block not found"))?;
 
-    let mut n_chan     = None::<usize>;
-    let mut sfreq      = None::<f64>;
-    let mut lowpass    = None::<f64>;
-    let mut highpass   = None::<f64>;
-    let mut line_freq  = None::<f64>;
-    let mut chs        = Vec::<ChannelInfo>::new();
+    let mut n_chan = None::<usize>;
+    let mut sfreq = None::<f64>;
+    let mut lowpass = None::<f64>;
+    let mut highpass = None::<f64>;
+    let mut line_freq = None::<f64>;
+    let mut chs = Vec::<ChannelInfo>::new();
     let mut bad_ch_names = Vec::<String>::new();
     let mut experimenter = None::<String>;
-    let mut description  = None::<String>;
+    let mut description = None::<String>;
 
     for ent in &info_node.entries {
         match ent.kind {
@@ -180,13 +191,23 @@ pub fn read_meas_info<R: Read + Seek>(reader: &mut R, tree: &Node) -> Result<Mea
     }
 
     let n_chan = n_chan.ok_or_else(|| anyhow::anyhow!("FIFF_NCHAN not found"))?;
-    let sfreq  = sfreq.ok_or_else(|| anyhow::anyhow!("FIFF_SFREQ not found"))?;
+    let sfreq = sfreq.ok_or_else(|| anyhow::anyhow!("FIFF_SFREQ not found"))?;
 
     if chs.len() != n_chan {
         bail!("expected {n_chan} ch_info structs, got {}", chs.len());
     }
 
-    Ok(MeasInfo { n_chan, sfreq, lowpass, highpass, line_freq, chs, bad_ch_names, experimenter, description })
+    Ok(MeasInfo {
+        n_chan,
+        sfreq,
+        lowpass,
+        highpass,
+        line_freq,
+        chs,
+        bad_ch_names,
+        experimenter,
+        description,
+    })
 }
 
 #[cfg(test)]

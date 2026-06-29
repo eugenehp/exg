@@ -1,7 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
+use exg::{
+    io::{write_batch, RawData},
+    preprocess, PipelineConfig,
+};
 use std::path::PathBuf;
-use exg::{preprocess, PipelineConfig, io::{RawData, write_batch}};
 
 #[derive(Parser)]
 #[command(name = "preproc", about = "EEG preprocessing pipeline (Rust/Burn)")]
@@ -31,8 +34,12 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let raw = RawData::load(&args.input)?;
-    println!("Loaded {} ch × {} samples @ {} Hz",
-        raw.data.nrows(), raw.data.ncols(), raw.sfreq);
+    println!(
+        "Loaded {} ch × {} samples @ {} Hz",
+        raw.data.nrows(),
+        raw.data.ncols(),
+        raw.sfreq
+    );
 
     let bad: Vec<String> = if args.bad_channels.is_empty() {
         vec![]

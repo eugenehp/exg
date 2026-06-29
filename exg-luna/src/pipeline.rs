@@ -46,7 +46,8 @@ impl Default for LunaPipelineConfig {
             notch_freq: Some(60.0),
             target_sfreq: 256.0,
             epoch_dur: 5.0,
-            montage: TCP_MONTAGE.iter()
+            montage: TCP_MONTAGE
+                .iter()
                 .map(|&(name, anode, cathode)| {
                     (name.to_string(), anode.to_string(), cathode.to_string())
                 })
@@ -64,8 +65,8 @@ impl LunaPipelineConfig {
 
 /// The standard 21 electrodes of the 10-20 system used by TUH/LUNA.
 pub const STANDARD_10_20: &[&str] = &[
-    "FP1", "FP2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2",
-    "F7", "F8", "T3", "T4", "T5", "T6", "FZ", "CZ", "PZ", "A1", "A2",
+    "FP1", "FP2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2", "F7", "F8", "T3", "T4", "T5",
+    "T6", "FZ", "CZ", "PZ", "A1", "A2",
 ];
 
 /// Run the LUNA preprocessing pipeline on a continuous recording.
@@ -96,7 +97,8 @@ pub fn preprocess_luna(
     cfg: &LunaPipelineConfig,
 ) -> Result<Vec<(Array2<f32>, Vec<String>)>> {
     // 1. Normalise channel names
-    let norm_names: Vec<String> = ch_names.iter()
+    let norm_names: Vec<String> = ch_names
+        .iter()
         .map(|n| montage::normalize_channel_name(n))
         .collect();
 
@@ -138,11 +140,8 @@ pub fn preprocess_luna(
 
     // 6. Bipolar montage — always use TCP_MONTAGE (the default).
     // Custom montages are matched by name against TCP_MONTAGE entries.
-    let (bipolar_data, bipolar_names) = montage::make_bipolar(
-        &picked_data,
-        &picked_names,
-        TCP_MONTAGE,
-    );
+    let (bipolar_data, bipolar_names) =
+        montage::make_bipolar(&picked_data, &picked_names, TCP_MONTAGE);
 
     if bipolar_data.nrows() == 0 {
         return Ok(vec![]);
@@ -186,7 +185,8 @@ mod tests {
         let dur = 30.0_f32;
         let n_t = (sfreq * dur) as usize;
 
-        let ch_names: Vec<String> = STANDARD_10_20.iter()
+        let ch_names: Vec<String> = STANDARD_10_20
+            .iter()
             .map(|&s| format!("EEG {}-REF", s))
             .collect();
 

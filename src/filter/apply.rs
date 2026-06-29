@@ -7,7 +7,7 @@
 //! reflect-limited padding of `N-1` samples on each side.
 use anyhow::Result;
 use ndarray::Array2;
-use rustfft::{FftPlanner, num_complex::Complex};
+use rustfft::{num_complex::Complex, FftPlanner};
 
 /// Apply a zero-phase FIR filter to each channel of `data` ([C, T]) in-place.
 ///
@@ -17,7 +17,8 @@ pub fn apply_fir_zero_phase(data: &mut Array2<f32>, h: &[f32]) -> Result<()> {
     for ch in 0..n_ch {
         let row: Vec<f32> = data.row(ch).to_vec();
         let filtered = filter_1d(&row, h)?;
-        data.row_mut(ch).assign(&ndarray::ArrayView1::from(&filtered));
+        data.row_mut(ch)
+            .assign(&ndarray::ArrayView1::from(&filtered));
     }
     Ok(())
 }
@@ -60,7 +61,7 @@ pub fn filter_1d(x: &[f32], h: &[f32]) -> Result<Vec<f32>> {
 
     for seg_idx in 0..n_segments {
         let start = seg_idx * n_seg;
-        let stop  = (start + n_seg).min(n_ext);
+        let stop = (start + n_seg).min(n_ext);
 
         // Zero-pad segment to n_fft.
         let mut buf: Vec<Complex<f32>> = x_ext[start..stop]
@@ -81,7 +82,7 @@ pub fn filter_1d(x: &[f32], h: &[f32]) -> Result<Vec<f32>> {
 
         // Accumulate with overlap-add (accounting for zero-phase shift).
         let out_start = start.saturating_sub(shift);
-        let out_end   = (out_start + n_fft).min(n_ext);
+        let out_end = (out_start + n_fft).min(n_ext);
         let prod_start = shift.saturating_sub(start);
 
         for (o, p) in (out_start..out_end).zip(prod_start..) {
@@ -152,7 +153,9 @@ fn choose_fft_len(n_h: usize, n_x: usize) -> usize {
 
     for pow in min_pow..=max_pow {
         let n = 1_usize << pow;
-        if n < min_fft { continue; }
+        if n < min_fft {
+            continue;
+        }
         let n_seg = (n - n_h + 1) as f64;
         let cost = (n_x as f64 / n_seg).ceil() * n as f64 * (pow as f64 + 1.0)
             + 4e-5 * n as f64 * n_x as f64;

@@ -85,6 +85,7 @@
 pub mod config;
 pub mod csv;
 pub mod edf;
+pub mod eeglab;
 pub mod epoch;
 pub mod fiff;
 pub mod filter;
@@ -126,31 +127,44 @@ pub use config::PipelineConfig;
 pub use csv::read_eeg;
 
 // edf
-pub use edf::{open_raw_edf, RawEdf, EdfHeader, SignalHeader, EdfAnnotation};
+pub use edf::{open_raw_edf, EdfAnnotation, EdfHeader, RawEdf, SignalHeader};
 
 // epoch
 pub use epoch::{epoch, epoch_and_baseline};
 
 // fiff  — measurement info, raw reader, tag I/O, tree, constants
 pub use fiff::{
+    build_tree,
     // high-level
-    open_raw, RawFif, BufferRecord,
-    ChannelInfo, MeasInfo, read_meas_info,
-    // tag I/O
-    TagHeader, read_tag_header,
-    read_i32, read_f32, read_f64,
-    read_string, read_i32_array, read_f32_array, read_f64_array,
-    read_raw_bytes, read_directory,
+    open_raw,
+    read_directory,
+    read_f32,
+    read_f32_array,
+    read_f64,
+    read_f64_array,
+    read_i32,
+    read_i32_array,
+    read_meas_info,
+    read_raw_bytes,
+    read_string,
+    read_tag_header,
+    read_tree,
+    scan_directory,
+    try_load_directory,
+    BufferRecord,
+    ChannelInfo,
+    MeasInfo,
     // tree
-    Node, build_tree, read_tree, scan_directory, try_load_directory,
+    Node,
+    RawFif,
+    // tag I/O
+    TagHeader,
 };
 
 // filter — design helpers + convolution
 pub use filter::{
-    auto_trans_bandwidth, auto_trans_bandwidth_lowpass, auto_filter_length,
-    design_highpass, design_lowpass, design_bandpass, design_notch,
-    firwin, hamming,
-    apply_fir_zero_phase, filter_1d,
+    apply_fir_zero_phase, auto_filter_length, auto_trans_bandwidth, auto_trans_bandwidth_lowpass,
+    design_bandpass, design_highpass, design_lowpass, design_notch, filter_1d, firwin, hamming,
 };
 
 // hdf5 — HDF5 dataset reader (feature-gated)
@@ -158,43 +172,62 @@ pub use filter::{
 pub use hdf5::{read_dataset as read_hdf5, read_dataset_split as read_hdf5_split, HDF5Sample};
 
 // io — safetensors helpers
-pub use io::{RawData, StWriter, write_batch};
+pub use io::{write_batch, RawData, StWriter};
 
 // montage
 pub use montage::{
-    make_bipolar, normalize_channel_name, pick_channels,
-    TCP_MONTAGE, SIENA_CHANNELS, SEED_V_CHANNELS, BipolarDef,
+    make_bipolar, normalize_channel_name, pick_channels, BipolarDef, SEED_V_CHANNELS,
+    SIENA_CHANNELS, TCP_MONTAGE,
 };
 
 // normalize
-pub use normalize::{zscore_global_inplace, zscore_channelwise_inplace, baseline_correct_inplace};
+pub use normalize::{baseline_correct_inplace, zscore_channelwise_inplace, zscore_global_inplace};
 
 // reference
 pub use reference::average_reference_inplace;
 
 // resample — resampler + supporting math
-pub use resample::{resample, resample_1d, auto_npad, rational_approx, final_length};
+pub use resample::{auto_npad, final_length, rational_approx, resample, resample_1d};
 
 // source_localization — inverse modeling (MNE / dSPM / sLORETA / eLORETA)
 #[cfg(feature = "source")]
 pub use source_localization::{
-    // types
-    ForwardOperator, NoiseCov, InverseOperator, InverseMethod,
-    SourceEstimate, SourceOrientation, EloretaOptions, PickOri,
-    // inverse
-    make_inverse_operator, apply_inverse, apply_inverse_full,
-    apply_inverse_epochs, apply_inverse_epochs_full,
+    apply_inverse,
+    apply_inverse_epochs,
+    apply_inverse_epochs_full,
+    apply_inverse_full,
     // covariance
-    compute_covariance, compute_covariance_epochs, Regularization,
-    // resolution
-    make_resolution_matrix, get_point_spread, get_cross_talk,
-    peak_localisation_error, spatial_spread, relative_amplitude,
+    compute_covariance,
+    compute_covariance_epochs,
     // snr
     estimate_snr,
-    // forward model
-    make_sphere_forward, make_sphere_forward_free, SphereModel,
+    get_cross_talk,
+    get_point_spread,
+    grid_source_space,
+    ico_n_vertices,
     // source space
-    ico_source_space, grid_source_space, ico_n_vertices,
+    ico_source_space,
+    // inverse
+    make_inverse_operator,
+    // resolution
+    make_resolution_matrix,
+    // forward model
+    make_sphere_forward,
+    make_sphere_forward_free,
+    peak_localisation_error,
+    relative_amplitude,
+    spatial_spread,
+    EloretaOptions,
+    // types
+    ForwardOperator,
+    InverseMethod,
+    InverseOperator,
+    NoiseCov,
+    PickOri,
+    Regularization,
+    SourceEstimate,
+    SourceOrientation,
+    SphereModel,
 };
 
 /// Run the **full EEG preprocessing pipeline** on a single continuous recording.

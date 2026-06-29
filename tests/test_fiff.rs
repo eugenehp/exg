@@ -4,8 +4,8 @@
 /// `scripts/gen_fiff_vectors.py` (MNE ground truth).  Each test documents
 /// the exact MNE call used to produce the reference.
 mod common;
-use common::load_vectors_f64;
 use approx::assert_abs_diff_eq;
+use common::load_vectors_f64;
 use exg::fiff::raw::open_raw;
 use std::path::Path;
 
@@ -19,7 +19,9 @@ fn fif_available() -> bool {
 
 #[test]
 fn info_nchan() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
     let expected = vecs.get("nchan").unwrap()[[0]] as i32;
     let raw = open_raw(FIF_PATH).unwrap();
@@ -28,7 +30,9 @@ fn info_nchan() {
 
 #[test]
 fn info_sfreq() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
     let expected = vecs.get("sfreq").unwrap()[[0]];
     let raw = open_raw(FIF_PATH).unwrap();
@@ -37,7 +41,9 @@ fn info_sfreq() {
 
 #[test]
 fn info_first_last_samp() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
     let expected_first = vecs.get("first_samp").unwrap()[[0]] as i64;
     let expected_ntimes = vecs.get("ntimes").unwrap()[[0]] as i64;
@@ -50,7 +56,9 @@ fn info_first_last_samp() {
 
 #[test]
 fn info_channel_names() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
     // ch_names is [C, 16] stored as U8 → decoded as f64 (byte values 0..255).
     let names_raw = vecs.get("ch_names").unwrap();
@@ -74,20 +82,24 @@ fn info_channel_names() {
 
 #[test]
 fn info_calibrations() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
-    let ref_cal   = vecs.get("ch_cal").unwrap();
+    let ref_cal = vecs.get("ch_cal").unwrap();
     let ref_range = vecs.get("ch_range").unwrap();
     let raw = open_raw(FIF_PATH).unwrap();
     for (i, ch) in raw.info.chs.iter().enumerate() {
-        assert_abs_diff_eq!(ch.cal   as f64, ref_cal  [[i]], epsilon = 1e-6_f64);
+        assert_abs_diff_eq!(ch.cal as f64, ref_cal[[i]], epsilon = 1e-6_f64);
         assert_abs_diff_eq!(ch.range as f64, ref_range[[i]], epsilon = 1e-6_f64);
     }
 }
 
 #[test]
 fn info_channel_kinds() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
     let ref_kind = vecs.get("ch_kind").unwrap();
     let raw = open_raw(FIF_PATH).unwrap();
@@ -98,16 +110,24 @@ fn info_channel_kinds() {
 
 #[test]
 fn info_channel_locations() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
-    let ref_locs = vecs.get("ch_locs").unwrap();  // [C, 12] f32
+    let ref_locs = vecs.get("ch_locs").unwrap(); // [C, 12] f32
     let raw = open_raw(FIF_PATH).unwrap();
     for (c, ch) in raw.info.chs.iter().enumerate() {
         for i in 0..12 {
             let got = ch.loc[i] as f64;
             let exp = ref_locs[[c, i]];
             if exp.is_nan() {
-                assert!(got.is_nan(), "ch[{}] loc[{}]: expected NaN, got {}", c, i, got);
+                assert!(
+                    got.is_nan(),
+                    "ch[{}] loc[{}]: expected NaN, got {}",
+                    c,
+                    i,
+                    got
+                );
             } else {
                 assert_abs_diff_eq!(got, exp, epsilon = 1e-6_f64);
             }
@@ -119,9 +139,11 @@ fn info_channel_locations() {
 
 #[test]
 fn data_shape_matches_mne() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_data");
-    let ref_data = vecs.get("data").unwrap();   // [C, T] f64 from MNE
+    let ref_data = vecs.get("data").unwrap(); // [C, T] f64 from MNE
     let raw = open_raw(FIF_PATH).unwrap();
     let data = raw.read_all_data().unwrap();
     assert_eq!(data.nrows(), ref_data.shape()[0], "n_channels");
@@ -132,14 +154,16 @@ fn data_shape_matches_mne() {
 fn data_all_samples_match_mne() {
     // MNE reference: `raw.get_data()` with `preload=True`.
     // Tolerance: f32 round-trip → max error ≤ 1 ULP of f32.
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_data");
     let ref_data = vecs.get("data").unwrap();
     let raw = open_raw(FIF_PATH).unwrap();
     let data = raw.read_all_data().unwrap();
 
     let n_ch = data.nrows();
-    let n_t  = data.ncols();
+    let n_t = data.ncols();
     let mut max_err = 0_f64;
     let mut worst_c = 0;
     let mut worst_t = 0;
@@ -156,37 +180,50 @@ fn data_all_samples_match_mne() {
     }
 
     // Raw values are stored as f32 in the FIF file → round-trip error ≤ ~1e-10.
-    assert!(max_err < 1e-9,
+    assert!(
+        max_err < 1e-9,
         "max error {max_err:.2e} at ch={worst_c} t={worst_t}  \
          (got={:.10e} ref={:.10e})",
-        data[[worst_c, worst_t]], ref_data[[worst_c, worst_t]]);
+        data[[worst_c, worst_t]],
+        ref_data[[worst_c, worst_t]]
+    );
 }
 
 #[test]
 fn data_first_second_sample_exact() {
     // Bit-exact: raw buffer bytes decoded in Python and Rust must be identical.
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs_short = load_vectors_f64("fiff_sample_data_short");
-    let ref_256 = vecs_short.get("data").unwrap();  // [12, 256] f64
+    let ref_256 = vecs_short.get("data").unwrap(); // [12, 256] f64
     let raw = open_raw(FIF_PATH).unwrap();
     let data = raw.read_slice(0, 256).unwrap();
 
     for c in 0..12 {
         for t in 0..256 {
             let err = (data[[c, t]] - ref_256[[c, t]]).abs();
-            assert!(err < 1e-9,
+            assert!(
+                err < 1e-9,
                 "ch={} t={}: got={:.10e} ref={:.10e} err={:.2e}",
-                c, t, data[[c, t]], ref_256[[c, t]], err);
+                c,
+                t,
+                data[[c, t]],
+                ref_256[[c, t]],
+                err
+            );
         }
     }
 }
 
 #[test]
 fn read_slice_equals_subarray_of_read_all() {
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let raw = open_raw(FIF_PATH).unwrap();
     let all = raw.read_all_data().unwrap();
-    let slice = raw.read_slice(100, 600).unwrap();   // 500 samples
+    let slice = raw.read_slice(100, 600).unwrap(); // 500 samples
     for c in 0..12 {
         for t in 0..500 {
             assert_abs_diff_eq!(slice[[c, t]], all[[c, t + 100]], epsilon = 1e-14);
@@ -197,9 +234,11 @@ fn read_slice_equals_subarray_of_read_all() {
 #[test]
 fn buffer_boundaries_match_mne() {
     // MNE: `raw._raw_extras[0]['bounds']`
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_info");
-    let ref_bounds = vecs.get("buf_bounds").unwrap();  // int64
+    let ref_bounds = vecs.get("buf_bounds").unwrap(); // int64
     let raw = open_raw(FIF_PATH).unwrap();
 
     // Build the cumulative boundary array from our buffer records.
@@ -209,9 +248,15 @@ fn buffer_boundaries_match_mne() {
         rust_bounds.push(rust_bounds.last().copied().unwrap() + buf.n_samp as u64);
     }
 
-    assert_eq!(rust_bounds.len(), ref_bounds.shape()[0],
-        "number of boundaries: Rust={} MNE={}", rust_bounds.len(), ref_bounds.shape()[0]);
-    for (i, (&rust_b, ref_b)) in rust_bounds.iter()
+    assert_eq!(
+        rust_bounds.len(),
+        ref_bounds.shape()[0],
+        "number of boundaries: Rust={} MNE={}",
+        rust_bounds.len(),
+        ref_bounds.shape()[0]
+    );
+    for (i, (&rust_b, ref_b)) in rust_bounds
+        .iter()
         .zip(ref_bounds.iter().map(|&v| v as u64))
         .enumerate()
     {
@@ -222,7 +267,9 @@ fn buffer_boundaries_match_mne() {
 #[test]
 fn data_statistics_match_mne() {
     // High-level sanity: mean / std / min / max should match to float32 precision.
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let vecs = load_vectors_f64("fiff_sample_data");
     let ref_data = vecs.get("data").unwrap();
     let raw = open_raw(FIF_PATH).unwrap();
@@ -230,20 +277,22 @@ fn data_statistics_match_mne() {
 
     let n = data.len() as f64;
     let rust_mean = data.iter().sum::<f64>() / n;
-    let ref_mean  = ref_data.iter().sum::<f64>() / n;
+    let ref_mean = ref_data.iter().sum::<f64>() / n;
     assert_abs_diff_eq!(rust_mean, ref_mean, epsilon = 1e-12);
 
     let rust_max = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let ref_max  = ref_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let ref_max = ref_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     assert_abs_diff_eq!(rust_max, ref_max, epsilon = 1e-10);
 }
 
 #[test]
 fn read_slice_boundary_wraps_buffers() {
     // A slice that spans exactly two buffer boundaries should still be correct.
-    if !fif_available() { return; }
+    if !fif_available() {
+        return;
+    }
     let raw = open_raw(FIF_PATH).unwrap();
-    let all  = raw.read_all_data().unwrap();
+    let all = raw.read_all_data().unwrap();
     // Sample1_raw: buffers are 256 samples each.
     // Slice from 200..320 crosses the 256-sample boundary.
     let slice = raw.read_slice(200, 320).unwrap();

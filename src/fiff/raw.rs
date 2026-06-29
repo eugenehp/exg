@@ -14,11 +14,11 @@
 //! calibrated_f64[ch, t] = raw_value[t, ch] × info.chs[ch].cal × info.chs[ch].range
 //! ```
 //! This matches MNE's `_cals = np.array([ch['range'] * ch['cal'] for ch in chs])`.
+use anyhow::{bail, Context, Result};
+use ndarray::Array2;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek};
 use std::path::{Path, PathBuf};
-use anyhow::{bail, Context, Result};
-use ndarray::Array2;
 
 use super::constants::*;
 use super::info::{read_meas_info, MeasInfo};
@@ -32,11 +32,11 @@ use super::tree::{read_tree, scan_directory, try_load_directory};
 /// A single data buffer from a FIFF file, with its byte offset and sample range.
 pub struct BufferRecord {
     /// Tag header for this buffer (use `.pos + 16` to seek to data).
-    pub tag:        TagHeader,
+    pub tag: TagHeader,
     /// Absolute first sample index (in acquisition time; may include initial skip).
     pub first_samp: u64,
     /// Number of samples in this buffer.
-    pub n_samp:     usize,
+    pub n_samp: usize,
 }
 
 // ── RawFif ───────────────────────────────────────────────────────────────
@@ -45,15 +45,15 @@ pub struct BufferRecord {
 #[derive(Debug, Clone)]
 pub struct RawFif {
     /// Measurement info (channels, sfreq, …).
-    pub info:       MeasInfo,
+    pub info: MeasInfo,
     /// First sample index in acquisition time.
     pub first_samp: u64,
     /// Last sample index (inclusive) in acquisition time.
-    pub last_samp:  u64,
+    pub last_samp: u64,
     /// File this was read from (for lazy re-reads).
-    pub path:       PathBuf,
+    pub path: PathBuf,
     /// Buffer table: one record per contiguous data block in the file.
-    pub buffers:    Vec<BufferRecord>,
+    pub buffers: Vec<BufferRecord>,
 }
 
 impl RawFif {
@@ -73,13 +73,13 @@ impl RawFif {
     ///
     /// This is equivalent to `raw.get_data()` in MNE with `preload=True`.
     pub fn read_all_data(&self) -> Result<Array2<f64>> {
-        let n_ch  = self.info.n_chan;
-        let n_t   = self.n_times();
-        let cals  = self.info.cals();
+        let n_ch = self.info.n_chan;
+        let n_t = self.n_times();
+        let cals = self.info.cals();
         let mut out = Array2::<f64>::zeros((n_ch, n_t));
 
-        let file = File::open(&self.path)
-            .with_context(|| format!("open {}", self.path.display()))?;
+        let file =
+            File::open(&self.path).with_context(|| format!("open {}", self.path.display()))?;
         let mut reader = BufReader::new(file);
         let mut t_offset: usize = 0;
 
@@ -88,7 +88,7 @@ impl RawFif {
             let data = read_buffer_data(&mut reader, &buf.tag, n_samp, n_ch, &cals)?;
             // data is [n_ch, n_samp]
             out.slice_mut(ndarray::s![.., t_offset..t_offset + n_samp])
-               .assign(&data);
+                .assign(&data);
             t_offset += n_samp;
         }
         assert_eq!(t_offset, n_t, "buffer totals don't match n_times");
@@ -103,11 +103,11 @@ impl RawFif {
         let cals = self.info.cals();
         let mut out = Array2::<f64>::zeros((n_ch, end - start));
 
-        let file = File::open(&self.path)
-            .with_context(|| format!("open {}", self.path.display()))?;
+        let file =
+            File::open(&self.path).with_context(|| format!("open {}", self.path.display()))?;
         let mut reader = BufReader::new(file);
 
-        let mut samp_base: usize = 0;     // cumulative sample offset across buffers
+        let mut samp_base: usize = 0; // cumulative sample offset across buffers
         let mut out_offset: usize = 0;
 
         for buf in &self.buffers {
@@ -121,7 +121,7 @@ impl RawFif {
 
                 let data = read_buffer_data(&mut reader, &buf.tag, n_samp, n_ch, &cals)?;
                 out.slice_mut(ndarray::s![.., out_offset..out_offset + n_pick])
-                   .assign(&data.slice(ndarray::s![.., pick_l..pick_r]));
+                    .assign(&data.slice(ndarray::s![.., pick_l..pick_r]));
                 out_offset += n_pick;
             }
             samp_base += n_samp;
@@ -137,14 +137,13 @@ impl RawFif {
 /// Mirrors `mne.io.read_raw_fif(fname, preload=False)`.
 pub fn open_raw<P: AsRef<Path>>(path: P) -> Result<RawFif> {
     let path = path.as_ref();
-    let file = File::open(path)
-        .with_context(|| format!("open {}", path.display()))?;
+    let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
     let mut reader = BufReader::new(file);
 
     // 1. Load tag directory ------------------------------------------------
     let directory = match try_load_directory(&mut reader)? {
         Some(d) => d,
-        None    => scan_directory(&mut reader)?,
+        None => scan_directory(&mut reader)?,
     };
 
     // 2. Build block tree --------------------------------------------------
@@ -201,7 +200,13 @@ pub fn open_raw<P: AsRef<Path>>(path: P) -> Result<RawFif> {
                 if nskip > 0 {
                     let gap_samp = n_samp * nskip;
                     // We represent gaps by a tag with kind=-1 (no real data).
-                    let gap_tag = TagHeader { kind: -1, ftype: 0, size: 0, next: -1, pos: 0 };
+                    let gap_tag = TagHeader {
+                        kind: -1,
+                        ftype: 0,
+                        size: 0,
+                        next: -1,
+                        pos: 0,
+                    };
                     buffers.push(BufferRecord {
                         tag: gap_tag,
                         first_samp,
@@ -211,7 +216,11 @@ pub fn open_raw<P: AsRef<Path>>(path: P) -> Result<RawFif> {
                     nskip = 0;
                 }
 
-                buffers.push(BufferRecord { tag: *ent, first_samp, n_samp });
+                buffers.push(BufferRecord {
+                    tag: *ent,
+                    first_samp,
+                    n_samp,
+                });
                 first_samp += n_samp as u64;
             }
             FIFF_DATA_SKIP => {
@@ -246,10 +255,10 @@ pub fn open_raw<P: AsRef<Path>>(path: P) -> Result<RawFif> {
 /// interleaved channels — identical to MNE's `one.reshape(nsamp, nchan)`.
 fn read_buffer_data<R: Read + Seek>(
     reader: &mut R,
-    tag:    &TagHeader,
+    tag: &TagHeader,
     n_samp: usize,
     n_chan: usize,
-    cals:   &[f64],
+    cals: &[f64],
 ) -> Result<Array2<f64>> {
     // Gap buffers (kind == -1) → return zeros.
     if tag.kind < 0 {
@@ -261,44 +270,50 @@ fn read_buffer_data<R: Read + Seek>(
 
     let mut out = Array2::<f64>::zeros((n_chan, n_samp));
 
+    // Vectorized decode: one bulk read, then a tight chunks_exact loop.
+    // Replaces a 4-byte (or 2/8) read_exact per sample with one read of the
+    // whole buffer — drops syscall + buffer overhead from O(n_samp × n_chan)
+    // to O(1).
+    let bps = bytes_per_sample(tag.ftype)
+        .ok_or_else(|| anyhow::anyhow!("unsupported buffer type {}", tag.ftype))?;
+    let total_bytes = n_samp * n_chan * bps;
+    let mut raw_bytes = vec![0u8; total_bytes];
+    reader
+        .read_exact(&mut raw_bytes)
+        .context("read data buffer")?;
+
+    let out_slice = out.as_slice_mut().expect("contiguous");
+    let n_t = n_samp;
     match tag.ftype {
         FIFFT_FLOAT => {
-            let mut buf = [0u8; 4];
-            for t in 0..n_samp {
-                for c in 0..n_chan {
-                    reader.read_exact(&mut buf)?;
-                    let raw = f32::from_be_bytes(buf) as f64;
-                    out[[c, t]] = raw * cals[c];
+            for (t, row) in raw_bytes.chunks_exact(4 * n_chan).enumerate() {
+                for (c, b) in row.chunks_exact(4).enumerate() {
+                    let v = f32::from_be_bytes([b[0], b[1], b[2], b[3]]) as f64;
+                    out_slice[c * n_t + t] = v * cals[c];
                 }
             }
         }
         FIFFT_DOUBLE => {
-            let mut buf = [0u8; 8];
-            for t in 0..n_samp {
-                for c in 0..n_chan {
-                    reader.read_exact(&mut buf)?;
-                    let raw = f64::from_be_bytes(buf);
-                    out[[c, t]] = raw * cals[c];
+            for (t, row) in raw_bytes.chunks_exact(8 * n_chan).enumerate() {
+                for (c, b) in row.chunks_exact(8).enumerate() {
+                    let v = f64::from_be_bytes(b.try_into().unwrap());
+                    out_slice[c * n_t + t] = v * cals[c];
                 }
             }
         }
         FIFFT_INT => {
-            let mut buf = [0u8; 4];
-            for t in 0..n_samp {
-                for c in 0..n_chan {
-                    reader.read_exact(&mut buf)?;
-                    let raw = i32::from_be_bytes(buf) as f64;
-                    out[[c, t]] = raw * cals[c];
+            for (t, row) in raw_bytes.chunks_exact(4 * n_chan).enumerate() {
+                for (c, b) in row.chunks_exact(4).enumerate() {
+                    let v = i32::from_be_bytes([b[0], b[1], b[2], b[3]]) as f64;
+                    out_slice[c * n_t + t] = v * cals[c];
                 }
             }
         }
         FIFFT_SHORT | FIFFT_DAU_PACK16 => {
-            let mut buf = [0u8; 2];
-            for t in 0..n_samp {
-                for c in 0..n_chan {
-                    reader.read_exact(&mut buf)?;
-                    let raw = i16::from_be_bytes(buf) as f64;
-                    out[[c, t]] = raw * cals[c];
+            for (t, row) in raw_bytes.chunks_exact(2 * n_chan).enumerate() {
+                for (c, b) in row.chunks_exact(2).enumerate() {
+                    let v = i16::from_be_bytes([b[0], b[1]]) as f64;
+                    out_slice[c * n_t + t] = v * cals[c];
                 }
             }
         }
@@ -314,15 +329,19 @@ mod tests {
 
     /// Path to the real FIF test file (only available in CI / local dev with data).
     fn sample_fif() -> Option<PathBuf> {
-        let p = PathBuf::from(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/data/sample1_raw.fif"),
-        );
-        if p.exists() { Some(p) } else { None }
+        let p = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/data/sample1_raw.fif"));
+        if p.exists() {
+            Some(p)
+        } else {
+            None
+        }
     }
 
     #[test]
     fn open_raw_basic_info() {
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         assert_eq!(raw.info.n_chan, 12);
         assert_abs_diff_eq!(raw.info.sfreq, 256.0, epsilon = 1e-6);
@@ -333,9 +352,13 @@ mod tests {
 
     #[test]
     fn channel_names_match_mne() {
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
-        let expected = ["Fp1","Fp2","F3","F4","C3","C4","P3","P4","O1","O2","F7","F8"];
+        let expected = [
+            "Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2", "F7", "F8",
+        ];
         for (got, exp) in raw.info.ch_names().iter().zip(expected.iter()) {
             assert_eq!(*got, *exp, "channel name mismatch");
         }
@@ -343,7 +366,9 @@ mod tests {
 
     #[test]
     fn all_channels_eeg() {
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         for ch in &raw.info.chs {
             assert_eq!(ch.kind, FIFFV_EEG_CH, "channel {} is not EEG", ch.name);
@@ -352,7 +377,9 @@ mod tests {
 
     #[test]
     fn calibration_factors_are_one() {
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         for ch in &raw.info.chs {
             assert_abs_diff_eq!(ch.calibration(), 1.0, epsilon = 1e-7);
@@ -362,7 +389,9 @@ mod tests {
     #[test]
     fn buffer_count_matches_mne() {
         // MNE reports 15 data buffers for sample1_raw.fif
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         let n_real = raw.buffers.iter().filter(|b| b.tag.kind >= 0).count();
         assert_eq!(n_real, 15);
@@ -371,7 +400,9 @@ mod tests {
     #[test]
     fn data_matches_mne_first_sample() {
         // Reference: data[0, 0] from MNE = 2.0721382e-05
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         let data = raw.read_all_data().unwrap();
         assert_abs_diff_eq!(data[[0, 0]], 2.0721382e-05_f64, epsilon = 1e-10);
@@ -379,7 +410,9 @@ mod tests {
 
     #[test]
     fn data_shape() {
-        let Some(fif) = sample_fif() else { return; };
+        let Some(fif) = sample_fif() else {
+            return;
+        };
         let raw = open_raw(&fif).unwrap();
         let data = raw.read_all_data().unwrap();
         assert_eq!(data.shape(), &[12, 3840]);

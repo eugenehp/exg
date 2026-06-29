@@ -43,7 +43,8 @@ pub fn resample(data: &Array2<f32>, src_sfreq: f32, dst_sfreq: f32) -> Result<Ar
     for ch in 0..n_ch {
         let row: Vec<f32> = data.row(ch).to_vec();
         let resampled = resample_1d(&row, ratio, npad_l, npad_r)?;
-        out.row_mut(ch).assign(&ndarray::ArrayView1::from(&resampled));
+        out.row_mut(ch)
+            .assign(&ndarray::ArrayView1::from(&resampled));
     }
     Ok(out)
 }
@@ -85,7 +86,10 @@ pub fn resample_1d(x: &[f32], ratio: f64, npad_l: usize, npad_r: usize) -> Resul
     let fft = planner.plan_fft_forward(old_len);
     let mut buf: Vec<rustfft::num_complex::Complex<f64>> = x_ext
         .iter()
-        .map(|&v| rustfft::num_complex::Complex { re: v as f64, im: 0.0 })
+        .map(|&v| rustfft::num_complex::Complex {
+            re: v as f64,
+            im: 0.0,
+        })
         .collect();
     fft.process(&mut buf);
 
@@ -165,7 +169,11 @@ pub fn final_length(n: usize, up: usize, down: usize) -> usize {
 }
 
 fn gcd(mut a: usize, mut b: usize) -> usize {
-    while b != 0 { let t = b; b = a % b; a = t; }
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
     a
 }
 
@@ -198,7 +206,7 @@ mod tests {
 
     #[test]
     fn rational_approx_integer_ratio() {
-        assert_eq!(rational_approx(256.0, 512.0),  (1, 2));
+        assert_eq!(rational_approx(256.0, 512.0), (1, 2));
         assert_eq!(rational_approx(256.0, 1024.0), (1, 4));
         assert_eq!(rational_approx(256.0, 2048.0), (1, 8));
     }

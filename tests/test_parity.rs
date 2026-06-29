@@ -17,16 +17,32 @@ use exg::filter::design::*;
 const LP_75_256_FIRST3: [f64; 3] = [0.0, 0.0011561643652309693, -0.0006078593677176805];
 
 // highpass_0p5_256: N=1691, h[0]=2.6964792e-05
-const HP_05_256_FIRST3: [f64; 3] = [2.6964792235451508e-05, 2.7081967561582585e-05, 2.720056823081876e-05];
+const HP_05_256_FIRST3: [f64; 3] = [
+    2.6964792235451508e-05,
+    2.7081967561582585e-05,
+    2.720056823081876e-05,
+];
 
 // bandpass_0p1_75_256: N=8449
-const BP_01_75_FIRST3: [f64; 3] = [5.3976340822146335e-06, 5.402292600631122e-06, 5.406962396556493e-06];
+const BP_01_75_FIRST3: [f64; 3] = [
+    5.3976340822146335e-06,
+    5.402292600631122e-06,
+    5.406962396556493e-06,
+];
 
 // bandpass_1_40_256: N=845
-const BP_1_40_FIRST3: [f64; 3] = [5.417010928228019e-05, 5.4638797362817064e-05, 5.5119126933146115e-05];
+const BP_1_40_FIRST3: [f64; 3] = [
+    5.417010928228019e-05,
+    5.4638797362817064e-05,
+    5.5119126933146115e-05,
+];
 
 // notch_60_256: N=1691 (from create_filter, NOT _firwin_design standalone)
-const NOTCH_60_FIRST3: [f64; 3] = [-5.21386110830481306179e-05, -2.09709410768981113283e-05, 4.86110882540915340520e-05];
+const NOTCH_60_FIRST3: [f64; 3] = [
+    -5.21386110830481306179e-05,
+    -2.09709410768981113283e-05,
+    4.86110882540915340520e-05,
+];
 
 // ── LOWPASS ─────────────────────────────────────────────────────────────────
 
@@ -62,10 +78,26 @@ fn lowpass_100hz_512hz_length() {
 
 #[test]
 fn lowpass_trans_bandwidth() {
-    approx::assert_abs_diff_eq!(auto_trans_bandwidth_lowpass(75.0, 256.0), 18.75, epsilon = 1e-6);
-    approx::assert_abs_diff_eq!(auto_trans_bandwidth_lowpass(40.0, 256.0), 10.0, epsilon = 1e-6);
-    approx::assert_abs_diff_eq!(auto_trans_bandwidth_lowpass(100.0, 512.0), 25.0, epsilon = 1e-6);
-    approx::assert_abs_diff_eq!(auto_trans_bandwidth_lowpass(120.0, 256.0), 8.0, epsilon = 1e-6);
+    approx::assert_abs_diff_eq!(
+        auto_trans_bandwidth_lowpass(75.0, 256.0),
+        18.75,
+        epsilon = 1e-6
+    );
+    approx::assert_abs_diff_eq!(
+        auto_trans_bandwidth_lowpass(40.0, 256.0),
+        10.0,
+        epsilon = 1e-6
+    );
+    approx::assert_abs_diff_eq!(
+        auto_trans_bandwidth_lowpass(100.0, 512.0),
+        25.0,
+        epsilon = 1e-6
+    );
+    approx::assert_abs_diff_eq!(
+        auto_trans_bandwidth_lowpass(120.0, 256.0),
+        8.0,
+        epsilon = 1e-6
+    );
 }
 
 // ── HIGHPASS ────────────────────────────────────────────────────────────────

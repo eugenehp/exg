@@ -131,7 +131,11 @@ pub fn make_sphere_forward(
             src_pos[[s, 1]] - sphere.center[1],
             src_pos[[s, 2]] - sphere.center[2],
         ];
-        let q = [src_normals[[s, 0]], src_normals[[s, 1]], src_normals[[s, 2]]];
+        let q = [
+            src_normals[[s, 0]],
+            src_normals[[s, 1]],
+            src_normals[[s, 2]],
+        ];
 
         for e in 0..n_elec {
             let re = [
@@ -200,8 +204,7 @@ pub fn make_sphere_forward_free(
                     electrodes[[e, 2]] - sphere.center[2],
                 ];
 
-                gain[[e, s * 3 + ori]] =
-                    sphere_potential(&rd, q, &re, &bs, sphere.outer_radius());
+                gain[[e, s * 3 + ori]] = sphere_potential(&rd, q, &re, &bs, sphere.outer_radius());
             }
         }
     }
@@ -330,8 +333,7 @@ fn exact_series_coeff(n: f64, r1: f64, r2: f64, ratio: f64) -> f64 {
 
     // For the outer boundary (scalp = brain conductivity):
     let f23 = ((n1 + 1.0) / ratio + n1) * ((n1 + 1.0) + n1 / ratio) / (p * p);
-    let g23 =
-        (1.0 / ratio - 1.0) * (1.0 / ratio - 1.0) * n1 * (n1 + 1.0) / (p * p);
+    let g23 = (1.0 / ratio - 1.0) * (1.0 / ratio - 1.0) * n1 * (n1 + 1.0) / (p * p);
 
     let denom = f23 * a + g23 * b / r2_n;
 
@@ -597,12 +599,7 @@ fn sphere_potential(
 /// V = (1 / 4π) × [2(d·q)(r_e·d) - (d²)(r_e·q)] / (d³ r_e)
 ///
 /// where `d = r_e - r_d`.
-fn homogeneous_sphere_potential(
-    rd: &[f64; 3],
-    q: &[f64; 3],
-    re: &[f64; 3],
-    _radius: f64,
-) -> f64 {
+fn homogeneous_sphere_potential(rd: &[f64; 3], q: &[f64; 3], re: &[f64; 3], _radius: f64) -> f64 {
     // d = re - rd
     let d = [re[0] - rd[0], re[1] - rd[1], re[2] - rd[2]];
     let d_len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
@@ -642,9 +639,10 @@ fn homogeneous_sphere_potential(
     // V = (1 / 4πσ) × [ (d · q) / (d³) - (correction terms) ]
     //
     // Simplified (good approximation for EEG):
-    let v = inv_4pi * (2.0 * d_dot_q * re_dot_d / (d_len.powi(3) * re_len)
-        - d_sq * re_dot_q / (d_len.powi(3) * re_len)
-        + d_dot_q / (d_len * f));
+    let v = inv_4pi
+        * (2.0 * d_dot_q * re_dot_d / (d_len.powi(3) * re_len)
+            - d_sq * re_dot_q / (d_len.powi(3) * re_len)
+            + d_dot_q / (d_len * f));
 
     v
 }
@@ -731,9 +729,9 @@ mod tests {
         let elec = Array2::from_shape_vec(
             (3, 3),
             vec![
-                0.075, 0.0, 0.04,  // right
+                0.075, 0.0, 0.04, // right
                 -0.075, 0.0, 0.04, // left
-                0.0, 0.0, 0.115,   // top
+                0.0, 0.0, 0.115, // top
             ],
         )
         .unwrap();
@@ -796,7 +794,7 @@ mod tests {
     #[test]
     fn test_end_to_end_forward_to_inverse() {
         // Full pipeline: source space → forward → noise cov → inverse → apply
-        use crate::{make_inverse_operator, apply_inverse, InverseMethod, NoiseCov};
+        use crate::{apply_inverse, make_inverse_operator, InverseMethod, NoiseCov};
 
         let n_elec = 8;
         let elec = Array2::from_shape_fn((n_elec, 3), |(i, j)| {

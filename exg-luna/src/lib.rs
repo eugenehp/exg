@@ -45,5 +45,5 @@
 mod io;
 mod pipeline;
 
-pub use io::{LunaEpoch, export_luna_epochs, load_luna_epochs};
+pub use io::{export_luna_epochs, load_luna_epochs, LunaEpoch};
 pub use pipeline::{preprocess_luna, LunaPipelineConfig, STANDARD_10_20};

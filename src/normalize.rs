@@ -13,10 +13,15 @@ use ndarray::{Array2, Array3};
 pub fn zscore_global_inplace(data: &mut Array2<f32>) -> (f32, f32) {
     let n = data.len() as f64;
     let mean = data.iter().map(|&v| v as f64).sum::<f64>() / n;
-    let var  = data.iter().map(|&v| {
-        let d = v as f64 - mean; d * d
-    }).sum::<f64>() / n;
-    let std  = var.sqrt() as f32;
+    let var = data
+        .iter()
+        .map(|&v| {
+            let d = v as f64 - mean;
+            d * d
+        })
+        .sum::<f64>()
+        / n;
+    let std = var.sqrt() as f32;
     let mean = mean as f32;
 
     if std > 0.0 {
@@ -44,10 +49,14 @@ pub fn zscore_channelwise_inplace(data: &mut Array2<f32>) {
     for ch in 0..n_ch {
         let row = data.row(ch);
         let mean = row.iter().map(|&v| v as f64).sum::<f64>() / n;
-        let var = row.iter().map(|&v| {
-            let d = v as f64 - mean;
-            d * d
-        }).sum::<f64>() / n;
+        let var = row
+            .iter()
+            .map(|&v| {
+                let d = v as f64 - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / n;
         let std = var.sqrt() as f32;
         let mean = mean as f32;
         data.row_mut(ch).mapv_inplace(|v| (v - mean) / (std + eps));
@@ -60,11 +69,10 @@ pub fn baseline_correct_inplace(epochs: &mut Array3<f32>) {
     let (n_e, n_c, _n_t) = epochs.dim();
     for e in 0..n_e {
         for c in 0..n_c {
-            let m = epochs.slice(ndarray::s![e, c, ..])
-                          .mean()
-                          .unwrap_or(0.0);
-            epochs.slice_mut(ndarray::s![e, c, ..])
-                  .mapv_inplace(|v| v - m);
+            let m = epochs.slice(ndarray::s![e, c, ..]).mean().unwrap_or(0.0);
+            epochs
+                .slice_mut(ndarray::s![e, c, ..])
+                .mapv_inplace(|v| v - m);
         }
     }
 }
@@ -83,14 +91,19 @@ mod tests {
 
         let out_mean = data.iter().map(|&v| v as f64).sum::<f64>() / data.len() as f64;
         let out_std: f64 = {
-            let v = data.iter().map(|&v| {
-                let d = v as f64 - out_mean; d * d
-            }).sum::<f64>() / data.len() as f64;
+            let v = data
+                .iter()
+                .map(|&v| {
+                    let d = v as f64 - out_mean;
+                    d * d
+                })
+                .sum::<f64>()
+                / data.len() as f64;
             v.sqrt()
         };
 
-        approx::assert_abs_diff_eq!(out_mean as f32, 0.0,  epsilon = 1e-5_f32);
-        approx::assert_abs_diff_eq!(out_std  as f32, 1.0,  epsilon = 1e-4_f32);
+        approx::assert_abs_diff_eq!(out_mean as f32, 0.0, epsilon = 1e-5_f32);
+        approx::assert_abs_diff_eq!(out_std as f32, 1.0, epsilon = 1e-4_f32);
         // Returned params should be original mean/std, not post-normalization.
         assert!(std > 0.0);
         let _ = mean;
@@ -117,7 +130,15 @@ mod tests {
             let row = data.row(ch);
             let n = row.len() as f64;
             let mean = row.iter().map(|&v| v as f64).sum::<f64>() / n;
-            let std = (row.iter().map(|&v| { let d = v as f64 - mean; d * d }).sum::<f64>() / n).sqrt();
+            let std = (row
+                .iter()
+                .map(|&v| {
+                    let d = v as f64 - mean;
+                    d * d
+                })
+                .sum::<f64>()
+                / n)
+                .sqrt();
             approx::assert_abs_diff_eq!(mean as f32, 0.0, epsilon = 1e-4_f32);
             approx::assert_abs_diff_eq!(std as f32, 1.0, epsilon = 1e-3_f32);
         }

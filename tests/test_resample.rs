@@ -1,38 +1,44 @@
 mod common;
-use common::{load_vectors, max_abs_diff, array_std};
+use common::{array_std, load_vectors, max_abs_diff};
 use exg::resample::resample;
 use ndarray::Array2;
 
 fn run_resample_test(vec_name: &str, abs_tol: f32, rel_tol_pct: f32) {
     let vecs = load_vectors(vec_name);
     let x_arr = vecs.get("input").expect("missing 'input'");
-    let y_ref  = vecs.get("output").expect("missing 'output'");
-    let src    = vecs.get("src_sfreq").unwrap()[[0]] as f32;
-    let dst    = vecs.get("dst_sfreq").unwrap()[[0]] as f32;
+    let y_ref = vecs.get("output").expect("missing 'output'");
+    let src = vecs.get("src_sfreq").unwrap()[[0]] as f32;
+    let dst = vecs.get("dst_sfreq").unwrap()[[0]] as f32;
 
     let shape = x_arr.shape();
-    let x = Array2::from_shape_vec(
-        (shape[0], shape[1]),
-        x_arr.iter().cloned().collect(),
-    ).unwrap();
+    let x = Array2::from_shape_vec((shape[0], shape[1]), x_arr.iter().cloned().collect()).unwrap();
 
     let got = resample(&x, src, dst).unwrap();
 
     // Shape check.
     let ref_shape = y_ref.shape();
     assert_eq!(got.nrows(), ref_shape[0], "channel count mismatch");
-    assert_eq!(got.ncols(), ref_shape[1],
-        "sample count: got={} expected={}", got.ncols(), ref_shape[1]);
+    assert_eq!(
+        got.ncols(),
+        ref_shape[1],
+        "sample count: got={} expected={}",
+        got.ncols(),
+        ref_shape[1]
+    );
 
     let got_dyn = got.into_dyn();
     let max_err = max_abs_diff(&got_dyn, y_ref);
-    let sigma   = array_std(y_ref);
+    let sigma = array_std(y_ref);
 
-    assert!(max_err < abs_tol,
-        "[{vec_name}] max abs error {max_err:.2e} >= {abs_tol:.2e}");
-    assert!(max_err / sigma * 100.0 < rel_tol_pct,
+    assert!(
+        max_err < abs_tol,
+        "[{vec_name}] max abs error {max_err:.2e} >= {abs_tol:.2e}"
+    );
+    assert!(
+        max_err / sigma * 100.0 < rel_tol_pct,
         "[{vec_name}] relative error {:.4}% >= {rel_tol_pct}%",
-        max_err / sigma * 100.0);
+        max_err / sigma * 100.0
+    );
 }
 
 #[test]
@@ -62,10 +68,7 @@ fn resample_noop_exact() {
     let vecs = load_vectors("resample_512_to_256");
     let x_arr = vecs.get("input").unwrap();
     let shape = x_arr.shape();
-    let x = Array2::from_shape_vec(
-        (shape[0], shape[1]),
-        x_arr.iter().cloned().collect(),
-    ).unwrap();
+    let x = Array2::from_shape_vec((shape[0], shape[1]), x_arr.iter().cloned().collect()).unwrap();
     let got = resample(&x, 512.0, 512.0).unwrap();
     assert_eq!(got.shape(), x.shape());
     for (a, b) in got.iter().zip(x.iter()) {
@@ -85,7 +88,11 @@ fn resample_output_length_correct() {
         let expected = (n_in as f64 * dst as f64 / src as f64).round() as usize;
         let x = Array2::zeros((1, n_in));
         let got = resample(&x, src, dst).unwrap();
-        assert_eq!(got.ncols(), expected,
-            "src={src} dst={dst} n={n_in}: got={} expected={expected}", got.ncols());
+        assert_eq!(
+            got.ncols(),
+            expected,
+            "src={src} dst={dst} n={n_in}: got={} expected={expected}",
+            got.ncols()
+        );
     }
 }

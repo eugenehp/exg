@@ -9,9 +9,8 @@
 pub mod apply;
 pub mod design;
 
-pub use design::{
-    auto_trans_bandwidth, auto_trans_bandwidth_lowpass, auto_filter_length,
-    design_highpass, design_lowpass, design_bandpass, design_notch,
-    firwin, hamming,
-};
 pub use apply::{apply_fir_zero_phase, filter_1d};
+pub use design::{
+    auto_filter_length, auto_trans_bandwidth, auto_trans_bandwidth_lowpass, design_bandpass,
+    design_highpass, design_lowpass, design_notch, firwin, hamming,
+};

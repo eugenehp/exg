@@ -76,16 +76,11 @@ fn parse_header(bytes: &[u8]) -> Result<(HashMap<String, serde_json::Value>, usi
     anyhow::ensure!(bytes.len() >= 8, "safetensors file too small");
     let n = u64::from_le_bytes(bytes[..8].try_into().unwrap()) as usize;
     let header: HashMap<String, serde_json::Value> =
-        serde_json::from_slice(&bytes[8..8 + n])
-            .context("failed to parse safetensors header")?;
+        serde_json::from_slice(&bytes[8..8 + n]).context("failed to parse safetensors header")?;
     Ok((header, 8 + n))
 }
 
-fn read_f32_tensor(
-    bytes: &[u8],
-    data_start: usize,
-    entry: &serde_json::Value,
-) -> Result<Vec<f32>> {
+fn read_f32_tensor(bytes: &[u8], data_start: usize, entry: &serde_json::Value) -> Result<Vec<f32>> {
     let offsets = entry["data_offsets"].as_array().unwrap();
     let s = offsets[0].as_u64().unwrap() as usize;
     let e = offsets[1].as_u64().unwrap() as usize;
@@ -120,8 +115,10 @@ pub fn load_luna_epochs(path: &Path) -> Result<Vec<LunaEpoch>> {
         &bytes[data_start + s..data_start + e]
     };
     let n_epochs = i32::from_le_bytes([
-        n_epochs_bytes[0], n_epochs_bytes[1],
-        n_epochs_bytes[2], n_epochs_bytes[3],
+        n_epochs_bytes[0],
+        n_epochs_bytes[1],
+        n_epochs_bytes[2],
+        n_epochs_bytes[3],
     ]) as usize;
 
     let mut epochs = Vec::with_capacity(n_epochs);
@@ -129,7 +126,8 @@ pub fn load_luna_epochs(path: &Path) -> Result<Vec<LunaEpoch>> {
     for i in 0..n_epochs {
         // Signal
         let sig_key = format!("signal_{i}");
-        let sig_entry = header.get(&sig_key)
+        let sig_entry = header
+            .get(&sig_key)
             .with_context(|| format!("missing {sig_key}"))?;
         let sig_shape = shape_of(sig_entry);
         let sig_vec = read_f32_tensor(&bytes, data_start, sig_entry)?;
@@ -137,7 +135,8 @@ pub fn load_luna_epochs(path: &Path) -> Result<Vec<LunaEpoch>> {
 
         // Positions
         let pos_key = format!("positions_{i}");
-        let pos_entry = header.get(&pos_key)
+        let pos_entry = header
+            .get(&pos_key)
             .with_context(|| format!("missing {pos_key}"))?;
         let pos_shape = shape_of(pos_entry);
         let pos_vec = read_f32_tensor(&bytes, data_start, pos_entry)?;
@@ -159,7 +158,11 @@ pub fn load_luna_epochs(path: &Path) -> Result<Vec<LunaEpoch>> {
             vec![]
         };
 
-        epochs.push(LunaEpoch { signal, channel_positions, channel_names });
+        epochs.push(LunaEpoch {
+            signal,
+            channel_positions,
+            channel_names,
+        });
     }
 
     Ok(epochs)
@@ -177,13 +180,13 @@ mod tests {
             }),
             channel_positions: Array2::zeros((22, 3)),
             channel_names: vec![
-                "FP1-F7", "F7-T3", "T3-T5", "T5-O1",
-                "FP2-F8", "F8-T4", "T4-T6", "T6-O2",
-                "FP1-F3", "F3-C3", "C3-P3", "P3-O1",
-                "FP2-F4", "F4-C4", "C4-P4", "P4-O2",
-                "FZ-CZ", "CZ-PZ",
+                "FP1-F7", "F7-T3", "T3-T5", "T5-O1", "FP2-F8", "F8-T4", "T4-T6", "T6-O2", "FP1-F3",
+                "F3-C3", "C3-P3", "P3-O1", "FP2-F4", "F4-C4", "C4-P4", "P4-O2", "FZ-CZ", "CZ-PZ",
                 "T3-C3", "C3-CZ", "CZ-C4", "C4-T4",
-            ].into_iter().map(String::from).collect(),
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
         };
 
         let dir = std::env::temp_dir().join("exg_luna_export_test");

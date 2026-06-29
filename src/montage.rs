@@ -18,33 +18,33 @@ pub type BipolarDef = (&'static str, &'static str, &'static str);
 /// Each entry is `(bipolar_name, anode_electrode, cathode_electrode)`.
 pub const TCP_MONTAGE: &[BipolarDef] = &[
     // Left temporal chain
-    ("FP1-F7",  "FP1", "F7"),
-    ("F7-T3",   "F7",  "T3"),
-    ("T3-T5",   "T3",  "T5"),
-    ("T5-O1",   "T5",  "O1"),
+    ("FP1-F7", "FP1", "F7"),
+    ("F7-T3", "F7", "T3"),
+    ("T3-T5", "T3", "T5"),
+    ("T5-O1", "T5", "O1"),
     // Right temporal chain
-    ("FP2-F8",  "FP2", "F8"),
-    ("F8-T4",   "F8",  "T4"),
-    ("T4-T6",   "T4",  "T6"),
-    ("T6-O2",   "T6",  "O2"),
+    ("FP2-F8", "FP2", "F8"),
+    ("F8-T4", "F8", "T4"),
+    ("T4-T6", "T4", "T6"),
+    ("T6-O2", "T6", "O2"),
     // Left parasagittal chain
-    ("FP1-F3",  "FP1", "F3"),
-    ("F3-C3",   "F3",  "C3"),
-    ("C3-P3",   "C3",  "P3"),
-    ("P3-O1",   "P3",  "O1"),
+    ("FP1-F3", "FP1", "F3"),
+    ("F3-C3", "F3", "C3"),
+    ("C3-P3", "C3", "P3"),
+    ("P3-O1", "P3", "O1"),
     // Right parasagittal chain
-    ("FP2-F4",  "FP2", "F4"),
-    ("F4-C4",   "F4",  "C4"),
-    ("C4-P4",   "C4",  "P4"),
-    ("P4-O2",   "P4",  "O2"),
+    ("FP2-F4", "FP2", "F4"),
+    ("F4-C4", "F4", "C4"),
+    ("C4-P4", "C4", "P4"),
+    ("P4-O2", "P4", "O2"),
     // Central chain
-    ("FZ-CZ",   "FZ",  "CZ"),
-    ("CZ-PZ",   "CZ",  "PZ"),
+    ("FZ-CZ", "FZ", "CZ"),
+    ("CZ-PZ", "CZ", "PZ"),
     // Additional temporal (alt naming)
-    ("T3-C3",   "T3",  "C3"),
-    ("C3-CZ",   "C3",  "CZ"),
-    ("CZ-C4",   "CZ",  "C4"),
-    ("C4-T4",   "C4",  "T4"),
+    ("T3-C3", "T3", "C3"),
+    ("C3-CZ", "C3", "CZ"),
+    ("CZ-C4", "CZ", "C4"),
+    ("C4-T4", "C4", "T4"),
 ];
 
 /// Normalise a TUH-style channel name to a standard electrode label.
@@ -89,9 +89,7 @@ pub fn make_bipolar(
     montage: &[BipolarDef],
 ) -> (Array2<f32>, Vec<String>) {
     // Build lookup: normalised name → row index
-    let norm_names: Vec<String> = ch_names.iter()
-        .map(|n| normalize_channel_name(n))
-        .collect();
+    let norm_names: Vec<String> = ch_names.iter().map(|n| normalize_channel_name(n)).collect();
 
     let n_t = data.ncols();
     let mut out_rows: Vec<Vec<f32>> = Vec::new();
@@ -101,7 +99,9 @@ pub fn make_bipolar(
         let a_idx = norm_names.iter().position(|n| n == anode);
         let c_idx = norm_names.iter().position(|n| n == cathode);
         if let (Some(ai), Some(ci)) = (a_idx, c_idx) {
-            let row: Vec<f32> = data.row(ai).iter()
+            let row: Vec<f32> = data
+                .row(ai)
+                .iter()
                 .zip(data.row(ci).iter())
                 .map(|(&a, &c)| a - c)
                 .collect();
@@ -116,8 +116,8 @@ pub fn make_bipolar(
     }
 
     let flat: Vec<f32> = out_rows.into_iter().flatten().collect();
-    let bipolar_data = Array2::from_shape_vec((n_out, n_t), flat)
-        .expect("shape mismatch in bipolar montage");
+    let bipolar_data =
+        Array2::from_shape_vec((n_out, n_t), flat).expect("shape mismatch in bipolar montage");
 
     (bipolar_data, out_names)
 }
@@ -129,11 +129,8 @@ pub fn make_bipolar(
 /// No bipolar conversion needed — the data is used directly in unipolar montage.
 /// Channel order matches the Siena dataset from the BioFoundation project.
 pub const SIENA_CHANNELS: &[&str] = &[
-    "FP1", "FP2", "F3", "C3", "P3", "O1", "F7", "T3", "T5",
-    "FC1", "FC5", "CP1", "CP5", "F9",
-    "FZ", "CZ", "PZ",
-    "F4", "C4", "P4", "O2", "F8", "T4", "T6",
-    "FC2", "FC6", "CP2", "CP6", "F10",
+    "FP1", "FP2", "F3", "C3", "P3", "O1", "F7", "T3", "T5", "FC1", "FC5", "CP1", "CP5", "F9", "FZ",
+    "CZ", "PZ", "F4", "C4", "P4", "O2", "F8", "T4", "T6", "FC2", "FC6", "CP2", "CP6", "F10",
 ];
 
 // ── SEED-V dataset montage (62 unipolar channels) ───────────────────────────
@@ -143,14 +140,10 @@ pub const SIENA_CHANNELS: &[&str] = &[
 /// Unipolar montage — no bipolar conversion needed.
 /// Channel order matches the SEED_CHANNEL_LIST from the torcheeg library.
 pub const SEED_V_CHANNELS: &[&str] = &[
-    "FP1", "FPZ", "FP2",
-    "AF3", "AF4",
-    "F7", "F5", "F3", "F1", "FZ", "F2", "F4", "F6", "F8",
-    "FT7", "FC5", "FC3", "FC1", "FCZ", "FC2", "FC4", "FC6", "FT8",
-    "T7", "C5", "C3", "C1", "CZ", "C2", "C4", "C6", "T8",
-    "TP7", "CP5", "CP3", "CP1", "CPZ", "CP2", "CP4", "CP6", "TP8",
-    "P7", "P5", "P3", "P1", "PZ", "P2", "P4", "P6", "P8",
-    "PO7", "PO5", "PO3", "POZ", "PO4", "PO6", "PO8",
+    "FP1", "FPZ", "FP2", "AF3", "AF4", "F7", "F5", "F3", "F1", "FZ", "F2", "F4", "F6", "F8", "FT7",
+    "FC5", "FC3", "FC1", "FCZ", "FC2", "FC4", "FC6", "FT8", "T7", "C5", "C3", "C1", "CZ", "C2",
+    "C4", "C6", "T8", "TP7", "CP5", "CP3", "CP1", "CPZ", "CP2", "CP4", "CP6", "TP8", "P7", "P5",
+    "P3", "P1", "PZ", "P2", "P4", "P6", "P8", "PO7", "PO5", "PO3", "POZ", "PO4", "PO6", "PO8",
     "CB1", "O1", "OZ", "O2", "CB2",
 ];
 
@@ -171,9 +164,7 @@ pub fn pick_channels(
     ch_names: &[String],
     target_channels: &[&str],
 ) -> (Array2<f32>, Vec<String>) {
-    let norm_names: Vec<String> = ch_names.iter()
-        .map(|n| normalize_channel_name(n))
-        .collect();
+    let norm_names: Vec<String> = ch_names.iter().map(|n| normalize_channel_name(n)).collect();
 
     let n_t = data.ncols();
     let mut out_rows: Vec<Vec<f32>> = Vec::new();
@@ -193,8 +184,8 @@ pub fn pick_channels(
     }
 
     let flat: Vec<f32> = out_rows.into_iter().flatten().collect();
-    let picked = Array2::from_shape_vec((n_out, n_t), flat)
-        .expect("shape mismatch in pick_channels");
+    let picked =
+        Array2::from_shape_vec((n_out, n_t), flat).expect("shape mismatch in pick_channels");
 
     (picked, out_names)
 }
@@ -216,15 +207,12 @@ mod tests {
     fn bipolar_subtraction() {
         // 3 channels: FP1=1.0, F7=0.5, F3=0.2 (constant signals)
         let names: Vec<String> = vec!["EEG FP1-REF", "EEG F7-REF", "EEG F3-REF"]
-            .into_iter().map(String::from).collect();
-        let data = Array2::from_shape_fn((3, 100), |(c, _)| {
-            [1.0_f32, 0.5, 0.2][c]
-        });
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let data = Array2::from_shape_fn((3, 100), |(c, _)| [1.0_f32, 0.5, 0.2][c]);
 
-        let montage: &[BipolarDef] = &[
-            ("FP1-F7", "FP1", "F7"),
-            ("FP1-F3", "FP1", "F3"),
-        ];
+        let montage: &[BipolarDef] = &[("FP1-F7", "FP1", "F7"), ("FP1-F3", "FP1", "F3")];
 
         let (bp_data, bp_names) = make_bipolar(&data, &names, montage);
         assert_eq!(bp_names, vec!["FP1-F7", "FP1-F3"]);
@@ -243,7 +231,9 @@ mod tests {
     #[test]
     fn pick_channels_works() {
         let names: Vec<String> = vec!["EEG FP1-REF", "EEG F7-REF", "EEG CZ-REF", "EEG O1-REF"]
-            .into_iter().map(String::from).collect();
+            .into_iter()
+            .map(String::from)
+            .collect();
         let data = Array2::from_shape_fn((4, 50), |(c, _)| c as f32);
 
         let (picked, picked_names) = pick_channels(&data, &names, &["FP1", "CZ", "PZ"]);
@@ -268,13 +258,12 @@ mod tests {
 
     #[test]
     fn missing_channels_skipped() {
-        let names: Vec<String> = vec!["FP1", "F7"]
-            .into_iter().map(String::from).collect();
+        let names: Vec<String> = vec!["FP1", "F7"].into_iter().map(String::from).collect();
         let data = Array2::zeros((2, 50));
 
         let montage: &[BipolarDef] = &[
             ("FP1-F7", "FP1", "F7"),
-            ("FP1-F3", "FP1", "F3"),  // F3 missing
+            ("FP1-F3", "FP1", "F3"), // F3 missing
         ];
 
         let (bp_data, bp_names) = make_bipolar(&data, &names, montage);

@@ -238,9 +238,8 @@ mod tests {
         let mut gain = Array2::zeros((n_chan, n_src));
         for i in 0..n_chan {
             for j in 0..n_src {
-                let dist = ((i as f64 - j as f64 * n_chan as f64 / n_src as f64).powi(2)
-                    + 1.0)
-                    .sqrt();
+                let dist =
+                    ((i as f64 - j as f64 * n_chan as f64 / n_src as f64).powi(2) + 1.0).sqrt();
                 gain[[i, j]] = 1e-8 / dist;
             }
         }
@@ -254,10 +253,9 @@ mod tests {
             eps: 1e-4,
             force_equal: Some(true),
         };
-        let stc = apply_inverse_with_options(
-            &data, &inv, 1.0 / 9.0, InverseMethod::ELORETA, Some(&opts),
-        )
-        .unwrap();
+        let stc =
+            apply_inverse_with_options(&data, &inv, 1.0 / 9.0, InverseMethod::ELORETA, Some(&opts))
+                .unwrap();
         assert_eq!(stc.data.nrows(), n_src);
         assert!(stc.data.iter().all(|v: &f64| v.is_finite()));
     }

@@ -3,15 +3,17 @@
 //! Splits continuous [C, T] data into non-overlapping windows of
 //! `epoch_samples` samples, dropping any trailing incomplete window.
 //! Then applies per-channel baseline correction to each epoch.
-use ndarray::{Array2, Array3, s};
 use crate::normalize::baseline_correct_inplace;
+use ndarray::{s, Array2, Array3};
 
 /// Epoch `data` ([C, T]) into non-overlapping windows, return as `Vec<Array2<f32>>`.
 /// Each entry is shape [C, epoch_samples] with baseline correction applied.
 pub fn epoch_and_baseline(data: &Array2<f32>, epoch_samples: usize) -> Vec<Array2<f32>> {
     let arr3 = epoch(data, epoch_samples);
     let n_e = arr3.shape()[0];
-    (0..n_e).map(|e| arr3.slice(s![e, .., ..]).to_owned()).collect()
+    (0..n_e)
+        .map(|e| arr3.slice(s![e, .., ..]).to_owned())
+        .collect()
 }
 
 /// Epoch `data` ([C, T]) into a 3-D array [E, C, epoch_samples].
@@ -25,7 +27,7 @@ pub fn epoch(data: &Array2<f32>, epoch_samples: usize) -> Array3<f32> {
     for e in 0..n_epochs {
         let start = e * epoch_samples;
         out.slice_mut(s![e, .., ..])
-           .assign(&data.slice(s![.., start..start + epoch_samples]));
+            .assign(&data.slice(s![.., start..start + epoch_samples]));
     }
 
     baseline_correct_inplace(&mut out);

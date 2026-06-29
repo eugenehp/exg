@@ -19,8 +19,8 @@ use std::path::PathBuf;
 
 use exg::{
     epoch::epoch_and_baseline,
-    filter::{apply_fir_zero_phase, design_highpass},
     fiff::raw::open_raw,
+    filter::{apply_fir_zero_phase, design_highpass},
     io::StWriter,
     normalize::zscore_global_inplace,
     reference::average_reference_inplace,
@@ -104,20 +104,18 @@ fn main() -> Result<()> {
         "TIMING fif={ms_fif:.4}ms resample={ms_rs:.4}ms hp={ms_hp:.4}ms \
          ref={ms_ref:.4}ms zscore={ms_z:.4}ms epoch={ms_ep:.4}ms",
     );
-    eprintln!(
-        "  {n_ch} ch  src_sfreq={src_sfreq} Hz  {n_epochs} epochs"
-    );
+    eprintln!("  {n_ch} ch  src_sfreq={src_sfreq} Hz  {n_epochs} epochs");
 
     // ── 7. Write output ────────────────────────────────────────────────────
     eprintln!("Writing → {}", args.output.display());
     let mut w = StWriter::new();
 
     // Store each step at f32 precision (FIF buffers are f32 on disk).
-    w.add_f32_arr2("raw",     &raw_f32);
+    w.add_f32_arr2("raw", &raw_f32);
     w.add_f32_arr2("resample", &data_rs);
-    w.add_f32_arr2("hp",       &data_hp);
-    w.add_f32_arr2("ref",      &data_ref);
-    w.add_f32_arr2("zscore",   &data_z);
+    w.add_f32_arr2("hp", &data_hp);
+    w.add_f32_arr2("ref", &data_ref);
+    w.add_f32_arr2("zscore", &data_z);
 
     for (i, ep) in epochs.iter().enumerate() {
         w.add_f32_arr2(&format!("epoch_{i}"), ep);
@@ -125,9 +123,9 @@ fn main() -> Result<()> {
         w.add_f32_arr2(&format!("final_{i}"), &final_ep);
     }
 
-    w.add_i32("n_epochs",    &[n_epochs as i32],     &[1]);
-    w.add_f32("zscore_mean", &[mean],                 &[1]);
-    w.add_f32("zscore_std",  &[std],                  &[1]);
+    w.add_i32("n_epochs", &[n_epochs as i32], &[1]);
+    w.add_f32("zscore_mean", &[mean], &[1]);
+    w.add_f32("zscore_std", &[std], &[1]);
     w.write(&args.output)?;
 
     eprintln!("Done.");
@@ -136,4 +134,6 @@ fn main() -> Result<()> {
 
 /// Return `std::time::Instant::now()` (used for internal timing).
 #[inline(always)]
-fn now() -> std::time::Instant { std::time::Instant::now() }
+fn now() -> std::time::Instant {
+    std::time::Instant::now()
+}
